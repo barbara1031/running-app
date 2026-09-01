@@ -79,6 +79,17 @@
         th, td { border: 1px solid #e5e7eb; padding: 6px 4px; text-align: center; }
         th { background-color: #f3f4f6; color: #374151; white-space: nowrap; }
 
+        /* 💡 可點擊連結樣式 */
+        .clickable-link { color: #2563eb; text-decoration: underline; cursor: pointer; font-weight: bold; }
+        .clickable-link:hover { color: #1d4ed8; }
+
+        /* 💡 Modal 彈窗樣式 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-card { background: white; width: 90%; max-width: 420px; max-height: 80vh; border-radius: 12px; padding: 18px; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 12px; }
+        .modal-title { font-weight: bold; font-size: 15px; color: #1e3a8a; }
+        .close-modal-btn { background: #f3f4f6; border: none; font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: #4b5563; }
+
         .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #10b981; color: white; padding: 10px 20px; border-radius: 20px; font-weight: bold; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 99; }
     </style>
 </head>
@@ -178,13 +189,23 @@
         </div>
     </div>
 
-    <!-- 頁面 3：後端歷史數據 -->
+    <!-- 頁面 3：後端歷史數據 (可切換 3 種排序方式) -->
     <div id="backend-page" class="page">
         <div class="rank-card">
             <div class="rank-title">
-                <span>📅 選擇歷史日期</span>
+                <span>📅 選擇歷史日期查詢</span>
                 <select id="historyDateSelect" onchange="renderHistoryRankings()" style="padding: 4px; font-size: 13px;"></select>
             </div>
+
+            <div class="rank-title" style="margin-top: 8px;">
+                <span>🔀 資料排序方式</span>
+                <select id="historySortSelect" onchange="renderHistoryRankings()" style="padding: 4px; font-size: 13px;">
+                    <option value="seat">1. 依座號順序 (1 ➔ 29)</option>
+                    <option value="top5">2. 依累計 Top 5 次數 (多 ➔ 少)</option>
+                    <option value="validTotal">3. 依累計限時圈數 (多 ➔ 少)</option>
+                </select>
+            </div>
+
             <div style="margin-top: 10px; display: flex; gap: 8px;">
                 <button onclick="exportCSV()" style="flex:1; background:#059669; color:white; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;">📥 匯出當日 CSV 表格</button>
             </div>
@@ -192,25 +213,37 @@
 
         <div class="rank-card">
             <div class="rank-title" style="color:#1e3a8a;">📊 當日全班紀錄與累計 Top 5 統計</div>
+            <div style="font-size:11px; color:#6b7280; margin-bottom:6px;">💡 提示：點擊「Top5次數」或「累計圈數」藍字可查看歷史日期明細</div>
             <div style="overflow-x: auto;">
                 <table>
                     <thead>
                         <tr>
-                            <th>名次</th>
+                            <th>序號</th>
                             <th>座號</th>
                             <th>姓名</th>
                             <th>性別</th>
-                            <th>當日圈數</th>
+                            <th>當日總圈</th>
                             <th>當日限時圈</th>
                             <th>超時圈</th>
                             <th>累計Top5次數</th>
                             <th>累計限時圈</th>
-                            <th>狀態</th>
+                            <th>今日狀態</th>
                         </tr>
                     </thead>
                     <tbody id="historyTableBody"></tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    <!-- 💡 明細彈窗 (Modal) -->
+    <div id="detailModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">詳細紀錄</div>
+                <button class="close-modal-btn" onclick="closeModal()">✕</button>
+            </div>
+            <div id="modalBody"></div>
         </div>
     </div>
 
@@ -459,7 +492,6 @@
             }
         }
 
-        /* 💡 加圈時記錄首次抵達時間 (todayFirstLapTime) */
         function addLap(id) {
             const student = students.find(s => s.id === id);
             if (!student) return;
@@ -520,7 +552,6 @@
             setTimeout(() => { toast.style.display = 'none'; }, 1200);
         }
 
-        /* 💡 今日 Top 5 依「抵達時間 (todayFirstLapTime)」排序，並顯示當日日期 */
         function renderRankings() {
             document.getElementById('maleRankDate').innerText = `(${currentWorkingDate})`;
             document.getElementById('femaleRankDate').innerText = `(${currentWorkingDate})`;
@@ -548,7 +579,6 @@
             `).join('');
         }
 
-        /* 💡 計算全班歷史「累計 Top 5 次數」 */
         function calculateTop5Counts() {
             const counts = {};
             initialStudents.forEach(s => counts[s.id] = 0);
@@ -588,15 +618,33 @@
             renderHistoryRankings();
         }
 
-        /* 💡 後端歷史資料表格渲染：包含「當日限時圈」、「累計Top 5次數」、「累計限時圈」 */
         function renderHistoryRankings() {
             const dateVal = document.getElementById('historyDateSelect').value || currentWorkingDate;
+            const sortVal = document.getElementById('historySortSelect')?.value || 'seat';
             const targetData = historyLogs[dateVal] || students;
             const top5Counts = calculateTop5Counts();
 
-            const sortedData = [...targetData].sort((a,b) => (b.todayLaps || 0) - (a.todayLaps || 0));
+            let sortedData = [...targetData];
+
+            if (sortVal === 'seat') {
+                sortedData.sort((a,b) => a.id - b.id);
+            } else if (sortVal === 'top5') {
+                sortedData.sort((a,b) => {
+                    const cA = top5Counts[a.id] || 0;
+                    const cB = top5Counts[b.id] || 0;
+                    if (cB !== cA) return cB - cA;
+                    return a.id - b.id;
+                });
+            } else if (sortVal === 'validTotal') {
+                sortedData.sort((a,b) => {
+                    const vA = Math.max(0, (a.totalLaps || 0) - (a.totalLateLaps || 0));
+                    const vB = Math.max(0, (b.totalLaps || 0) - (b.totalLateLaps || 0));
+                    if (vB !== vA) return vB - vA;
+                    return a.id - b.id;
+                });
+            }
+
             const tbody = document.getElementById('historyTableBody');
-            
             tbody.innerHTML = sortedData.map((s, idx) => {
                 const validTodayLaps = Math.max(0, (s.todayLaps || 0) - (s.todayLateLaps || 0));
                 const validTotalLaps = Math.max(0, (s.totalLaps || 0) - (s.totalLateLaps || 0));
@@ -611,21 +659,151 @@
                         <td style="font-weight:bold; color:#2563eb;">${s.todayLaps || 0}</td>
                         <td style="color:#059669; font-weight:bold;">${validTodayLaps}</td>
                         <td style="color:#dc2626;">${s.todayLateLaps || 0}</td>
-                        <td style="font-weight:bold; color:#d97706;">${topCount} 次</td>
-                        <td style="color:#2563eb;">${validTotalLaps} 圈</td>
+                        <td><span class="clickable-link" onclick="showTop5Detail(${s.id})">${topCount} 次</span></td>
+                        <td><span class="clickable-link" onclick="showLapsDetail(${s.id})">${validTotalLaps} 圈</span></td>
                         <td>${s.isLeave ? '<span style="color:#ef4444;">請假</span>' : (s.todayLaps > 0 ? '<span style="color:#059669;">已完成</span>' : '<span style="color:#9ca3af;">未跑</span>')}</td>
                     </tr>
                 `;
             }).join('');
         }
 
+        /* 💡 彈窗明細邏輯：看是哪幾天登上 Top 5 */
+        function showTop5Detail(studentId) {
+            const student = initialStudents.find(s => s.id === studentId);
+            if (!student) return;
+
+            let logItems = [];
+            const dates = Object.keys(historyLogs).sort();
+
+            dates.forEach(date => {
+                const dayData = historyLogs[date] || [];
+                const topBoys = dayData.filter(s => s.gender === '男' && (s.todayLaps || 0) > 0)
+                                       .sort((a,b) => (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity))
+                                       .slice(0, 5);
+
+                const topGirls = dayData.filter(s => s.gender === '女' && (s.todayLaps || 0) > 0)
+                                         .sort((a,b) => (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity))
+                                         .slice(0, 5);
+
+                const targetList = student.gender === '男' ? topBoys : topGirls;
+                const foundIdx = targetList.findIndex(s => s.id === studentId);
+
+                if (foundIdx !== -1) {
+                    logItems.push({
+                        date: date,
+                        rank: foundIdx + 1,
+                        laps: targetList[foundIdx].todayLaps || 0,
+                        time: formatTime(targetList[foundIdx].todayFirstLapTime)
+                    });
+                }
+            });
+
+            document.getElementById('modalTitle').innerText = `🏆 ${student.id}號 ${student.name} - Top 5 登榜明細`;
+            const modalBody = document.getElementById('modalBody');
+
+            if (logItems.length === 0) {
+                modalBody.innerHTML = '<div style="color:#9ca3af; text-align:center; padding:15px;">尚無登上 Top 5 的紀錄</div>';
+            } else {
+                modalBody.innerHTML = `
+                    <div style="font-size:12px; margin-bottom:8px; color:#4b5563;">全學期共登榜 <b style="color:#d97706;">${logItems.length}</b> 次：</div>
+                    <table style="width:100%; border-collapse:collapse;">
+                        <thead><tr style="background:#f3f4f6;"><th>日期</th><th>當日名次</th><th>抵達時間</th><th>當日圈數</th></tr></thead>
+                        <tbody>
+                            ${logItems.map(item => `
+                                <tr>
+                                    <td><b>${item.date}</b></td>
+                                    <td style="color:#d97706; font-weight:bold;">第 ${item.rank} 名</td>
+                                    <td style="color:#6b7280; font-size:11px;">${item.time}</td>
+                                    <td>${item.laps} 圈</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+
+            document.getElementById('detailModal').style.display = 'flex';
+        }
+
+        /* 💡 彈窗明細邏輯：看是哪幾天累積的圈數 */
+        function showLapsDetail(studentId) {
+            const student = initialStudents.find(s => s.id === studentId);
+            if (!student) return;
+
+            let logItems = [];
+            const dates = Object.keys(historyLogs).sort();
+
+            dates.forEach(date => {
+                const dayData = historyLogs[date] || [];
+                const record = dayData.find(s => s.id === studentId);
+                if (record && (record.todayLaps || 0) > 0) {
+                    const valid = Math.max(0, (record.todayLaps || 0) - (record.todayLateLaps || 0));
+                    logItems.push({
+                        date: date,
+                        totalToday: record.todayLaps || 0,
+                        validToday: valid,
+                        lateToday: record.todayLateLaps || 0
+                    });
+                }
+            });
+
+            document.getElementById('modalTitle').innerText = `🏃‍♂️ ${student.id}號 ${student.name} - 跑步歷史明細`;
+            const modalBody = document.getElementById('modalBody');
+
+            if (logItems.length === 0) {
+                modalBody.innerHTML = '<div style="color:#9ca3af; text-align:center; padding:15px;">尚無跑步歷史紀錄</div>';
+            } else {
+                modalBody.innerHTML = `
+                    <table style="width:100%; border-collapse:collapse;">
+                        <thead><tr style="background:#f3f4f6;"><th>日期</th><th>限時圈數</th><th>超時圈</th><th>當日總圈</th></tr></thead>
+                        <tbody>
+                            ${logItems.map(item => `
+                                <tr>
+                                    <td><b>${item.date}</b></td>
+                                    <td style="color:#059669; font-weight:bold;">${item.validToday} 圈</td>
+                                    <td style="color:#dc2626;">${item.lateToday} 圈</td>
+                                    <td>${item.totalToday} 圈</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+
+            document.getElementById('detailModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
         function exportCSV() {
             const dateVal = document.getElementById('historyDateSelect').value || currentWorkingDate;
+            const sortVal = document.getElementById('historySortSelect')?.value || 'seat';
             const targetData = historyLogs[dateVal] || students;
             const top5Counts = calculateTop5Counts();
-            const sortedData = [...targetData].sort((a,b) => (b.todayLaps || 0) - (a.todayLaps || 0));
 
-            let csvContent = "\uFEFF名次,座號,姓名,性別,當日總圈數,當日限時圈,超時圈數,累計Top5次數,累計限時圈,狀態\n";
+            let sortedData = [...targetData];
+
+            if (sortVal === 'seat') {
+                sortedData.sort((a,b) => a.id - b.id);
+            } else if (sortVal === 'top5') {
+                sortedData.sort((a,b) => {
+                    const cA = top5Counts[a.id] || 0;
+                    const cB = top5Counts[b.id] || 0;
+                    if (cB !== cA) return cB - cA;
+                    return a.id - b.id;
+                });
+            } else if (sortVal === 'validTotal') {
+                sortedData.sort((a,b) => {
+                    const vA = Math.max(0, (a.totalLaps || 0) - (a.totalLateLaps || 0));
+                    const vB = Math.max(0, (b.totalLaps || 0) - (b.totalLateLaps || 0));
+                    if (vB !== vA) return vB - vA;
+                    return a.id - b.id;
+                });
+            }
+
+            let csvContent = "\uFEFF序號,座號,姓名,性別,當日總圈數,當日限時圈,超時圈數,累計Top5次數,累計限時圈,今日狀態\n";
             sortedData.forEach((s, idx) => {
                 const validTodayLaps = Math.max(0, (s.todayLaps || 0) - (s.todayLateLaps || 0));
                 const validTotalLaps = Math.max(0, (s.totalLaps || 0) - (s.totalLateLaps || 0));
