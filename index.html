@@ -53,7 +53,7 @@
         .seat-card.on-leave { background: #f3f4f6; border-color: #d1d5db; opacity: 0.7; }
         .seat-card.on-leave .seat-name { color: #9ca3af; text-decoration: line-through; }
 
-        /* 💡 控制按鈕：請假與扣圈 */
+        /* 控制按鈕：請假與扣圈 */
         .card-btn { position: absolute; top: 3px; font-size: 10px; padding: 2px 4px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; }
         .sub-btn { left: 3px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
         .leave-btn { right: 3px; }
@@ -68,16 +68,16 @@
 
         /* 排行榜與表格 */
         .rank-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .rank-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .rank-title { font-size: 15px; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .rank-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
         .rank-badge { font-weight: bold; width: 20px; }
         .top-1 { color: #d97706; }
         .top-2 { color: #4b5563; }
         .top-3 { color: #b45309; }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-        th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: center; }
-        th { background-color: #f3f4f6; color: #374151; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+        th, td { border: 1px solid #e5e7eb; padding: 6px 4px; text-align: center; }
+        th { background-color: #f3f4f6; color: #374151; white-space: nowrap; }
 
         .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #10b981; color: white; padding: 10px 20px; border-radius: 20px; font-weight: bold; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 99; }
     </style>
@@ -90,13 +90,13 @@
     </div>
     <div class="date-tag" id="currentDateDisplay"></div>
 
-    <!-- 自訂參數與手動日期切換面板 -->
+    <!-- 自訂參數面板 -->
     <div class="settings-card" id="settingsCard">
         <div class="settings-group">
             <div style="font-weight:bold; color:#1a56db; margin-bottom:4px;">⚙️ 自訂參數設定</div>
             
             <div class="settings-row">
-                <label>📅 工作日期 (系統自動偵測):</label>
+                <label>📅 工作日期:</label>
                 <div>
                     <input type="date" id="cfgDate" class="settings-input" style="width: 120px;">
                     <button onclick="resetToTodayDate()" style="font-size:11px; padding:3px 6px;">回到今天</button>
@@ -160,14 +160,20 @@
         <div class="student-grid" id="studentGrid"></div>
     </div>
 
-    <!-- 頁面 2：今日男女 Top 5 -->
+    <!-- 頁面 2：今日男女 Top 5 (依抵達時間排序) -->
     <div id="rank-page" class="page">
         <div class="rank-card">
-            <div class="rank-title" style="color: #2563eb;">👦 男生今日 Top 5</div>
+            <div class="rank-title" style="color: #2563eb;">
+                <span>👦 男生今日 Top 5</span>
+                <span id="maleRankDate" style="font-size:12px; color:#6b7280; font-weight:normal;"></span>
+            </div>
             <div id="maleRankList"></div>
         </div>
         <div class="rank-card">
-            <div class="rank-title" style="color: #db2777;">👧 女生今日 Top 5</div>
+            <div class="rank-title" style="color: #db2777;">
+                <span>👧 女生今日 Top 5</span>
+                <span id="femaleRankDate" style="font-size:12px; color:#6b7280; font-weight:normal;"></span>
+            </div>
             <div id="femaleRankList"></div>
         </div>
     </div>
@@ -176,7 +182,7 @@
     <div id="backend-page" class="page">
         <div class="rank-card">
             <div class="rank-title">
-                <span>📅 選擇歷史日期排名</span>
+                <span>📅 選擇歷史日期</span>
                 <select id="historyDateSelect" onchange="renderHistoryRankings()" style="padding: 4px; font-size: 13px;"></select>
             </div>
             <div style="margin-top: 10px; display: flex; gap: 8px;">
@@ -185,7 +191,7 @@
         </div>
 
         <div class="rank-card">
-            <div class="rank-title" style="color:#1e3a8a;">📊 當日全班詳細總排名</div>
+            <div class="rank-title" style="color:#1e3a8a;">📊 當日全班紀錄與累計 Top 5 統計</div>
             <div style="overflow-x: auto;">
                 <table>
                     <thead>
@@ -195,7 +201,10 @@
                             <th>姓名</th>
                             <th>性別</th>
                             <th>當日圈數</th>
-                            <th>超時圈數</th>
+                            <th>當日限時圈</th>
+                            <th>超時圈</th>
+                            <th>累計Top5次數</th>
+                            <th>累計限時圈</th>
                             <th>狀態</th>
                         </tr>
                     </thead>
@@ -209,38 +218,37 @@
 
     <script>
         const initialStudents = [
-            { id: 1, name: "李心彤", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 2, name: "林靚", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 3, name: "邱苡姮", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 4, name: "洪喬恩", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 5, name: "張家恩", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 6, name: "張鈺暄", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 7, name: "許云柔", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 8, name: "陳品慈", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 9, name: "陳禹霏", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 10, name: "陳臻", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 11, name: "游昕瞳", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 12, name: "黃禹蓁", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 13, name: "楊婕妤", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 14, name: "謝羽妮", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 15, name: "李禹柔", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 16, name: "王翊丞", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 17, name: "朱天佑", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 18, name: "林長存", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 19, name: "林祐興", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 20, name: "林航辰", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 21, name: "洪翊晉", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 22, name: "范容瑞", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 23, name: "徐國舜", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 24, name: "張宗祐", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 25, name: "張泓傅", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 26, name: "陳東昇", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 27, name: "陳彥宇", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 28, name: "廖佐熙", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
-            { id: 29, name: "鄭楷霖", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false }
+            { id: 1, name: "李心彤", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 2, name: "林靚", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 3, name: "邱苡姮", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 4, name: "洪喬恩", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 5, name: "張家恩", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 6, name: "張鈺暄", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 7, name: "許云柔", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 8, name: "陳品慈", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 9, name: "陳禹霏", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 10, name: "陳臻", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 11, name: "游昕瞳", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 12, name: "黃禹蓁", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 13, name: "楊婕妤", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 14, name: "謝羽妮", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 15, name: "李禹柔", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 16, name: "王翊丞", gender: "男", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 17, name: "朱天佑", gender: "男", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 18, name: "林長存", gender: "男", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 19, name: "林祐興", gender: "男", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 20, name: "林航辰", gender: "男", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 21, name: "洪翊晉", gender: "男", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 22, name: "范容瑞", gender: "男", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 23, name: "徐國舜", gender: "男", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 24, name: "張宗祐", gender: "男", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 25, name: "張泓傅", gender: "男", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 26, name: "陳東昇", gender: "男", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 27, name: "陳彥宇", gender: "男", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 28, name: "廖佐熙", gender: "男", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 29, name: "鄭楷霖", gender: "男", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false }
         ];
 
-        // 💡 1. 日期自動偵測與格式化
         const getSystemTodayDateStr = () => {
             const now = new Date();
             const year = now.getFullYear();
@@ -259,7 +267,7 @@
         };
 
         let historyLogs = JSON.parse(localStorage.getItem('running_history')) || {};
-        let students = historyLogs[currentWorkingDate] || JSON.parse(localStorage.getItem('running_data')) || initialStudents;
+        let students = historyLogs[currentWorkingDate] || JSON.parse(localStorage.getItem('running_data')) || JSON.parse(JSON.stringify(initialStudents));
 
         function updateDateUI() {
             document.getElementById('currentDateDisplay').innerText = `📅 當前紀錄日期：${currentWorkingDate}`;
@@ -275,7 +283,6 @@
             currentWorkingDate = newDate;
             localStorage.setItem('running_active_date', currentWorkingDate);
             
-            // 載入該日期的數據，若不存在則新初始化
             if (historyLogs[currentWorkingDate]) {
                 students = historyLogs[currentWorkingDate];
             } else {
@@ -283,6 +290,7 @@
                     ...s,
                     todayLaps: 0,
                     todayLateLaps: 0,
+                    todayFirstLapTime: null,
                     isLeave: false
                 }));
             }
@@ -291,14 +299,12 @@
             renderGrid();
         }
 
-        // 初始化設定介面數值
         document.getElementById('cfgTimerMin').value = config.timerMin;
         document.getElementById('cfgTimerSec').value = config.timerSec;
         document.getElementById('cfgTarget').value = config.targetLaps;
         document.getElementById('cfgReward').value = config.rewardText;
         document.getElementById('displayReward').innerText = config.rewardText;
 
-        /* 💡 2. 計時器（精確到秒與超時標記） */
         let timeLeft = (config.timerMin * 60) + config.timerSec;
         let timerInterval = null;
         let isTimeUp = false;
@@ -382,6 +388,15 @@
             if (pageId === 'backend-page') prepareBackendPage();
         }
 
+        function formatTime(ts) {
+            if (!ts) return '--:--';
+            const d = new Date(ts);
+            const h = String(d.getHours()).padStart(2, '0');
+            const m = String(d.getMinutes()).padStart(2, '0');
+            const s = String(d.getSeconds()).padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+
         function renderGrid() {
             const grid = document.getElementById('studentGrid');
             grid.innerHTML = '';
@@ -408,7 +423,6 @@
             updateProgressBar();
         }
 
-        /* 💡 3. 扣圈/減圈功能 (-1) */
         function subtractLap(event, id) {
             event.stopPropagation();
             const student = students.find(s => s.id === id);
@@ -420,7 +434,10 @@
             student.todayLaps -= 1;
             student.totalLaps = Math.max(0, (student.totalLaps || 0) - 1);
 
-            // 若有超時圈數，優先扣除超時圈數
+            if (student.todayLaps === 0) {
+                student.todayFirstLapTime = null;
+            }
+
             if ((student.todayLateLaps || 0) > 0) {
                 student.todayLateLaps -= 1;
                 student.totalLateLaps = Math.max(0, (student.totalLateLaps || 0) - 1);
@@ -442,13 +459,17 @@
             }
         }
 
-        /* 💡 4. 加圈功能 (區分超時圈數與準時圈數) */
+        /* 💡 加圈時記錄首次抵達時間 (todayFirstLapTime) */
         function addLap(id) {
             const student = students.find(s => s.id === id);
             if (!student) return;
 
             if (student.isLeave) {
                 if(!confirm(`⚠️ ${student.id}號 ${student.name} 今日已被標記為「請假」，確定要幫他/她登記圈數嗎？`)) return;
+            }
+
+            if (!student.todayFirstLapTime) {
+                student.todayFirstLapTime = Date.now();
             }
 
             student.todayLaps = (student.todayLaps || 0) + 1;
@@ -466,7 +487,6 @@
             renderGrid();
         }
 
-        /* 💡 全班 500 圈目標計算：排除超時圈數 (totalLateLaps) */
         function updateProgressBar() {
             const validClassLaps = students.reduce((sum, s) => {
                 const validLaps = (s.totalLaps || 0) - (s.totalLateLaps || 0);
@@ -500,23 +520,53 @@
             setTimeout(() => { toast.style.display = 'none'; }, 1200);
         }
 
+        /* 💡 今日 Top 5 依「抵達時間 (todayFirstLapTime)」排序，並顯示當日日期 */
         function renderRankings() {
-            const maleList = students.filter(s => s.gender === '男').sort((a,b) => (b.todayLaps||0) - (a.todayLaps||0)).slice(0, 5);
-            const femaleList = students.filter(s => s.gender === '女').sort((a,b) => (b.todayLaps||0) - (a.todayLaps||0)).slice(0, 5);
+            document.getElementById('maleRankDate').innerText = `(${currentWorkingDate})`;
+            document.getElementById('femaleRankDate').innerText = `(${currentWorkingDate})`;
 
-            document.getElementById('maleRankList').innerHTML = maleList.map((s, index) => `
+            const maleList = students.filter(s => s.gender === '男' && (s.todayLaps || 0) > 0)
+                                     .sort((a,b) => (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity))
+                                     .slice(0, 5);
+
+            const femaleList = students.filter(s => s.gender === '女' && (s.todayLaps || 0) > 0)
+                                       .sort((a,b) => (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity))
+                                       .slice(0, 5);
+
+            document.getElementById('maleRankList').innerHTML = maleList.length === 0 ? '<div style="color:#9ca3af; font-size:13px; text-align:center;">今日尚無紀錄</div>' : maleList.map((s, index) => `
                 <div class="rank-item">
-                    <span><span class="rank-badge top-${index+1}">${index+1}</span> ${s.id}號 ${s.name} ${s.isLeave ? '(假)' : ''}</span>
-                    <span style="font-weight:bold; color:#2563eb;">今日 ${s.todayLaps||0} 圈 <span style="font-size:11px; color:#9ca3af; font-weight:normal;">(總 ${s.totalLaps||0})</span></span>
+                    <span><span class="rank-badge top-${index+1}">${index+1}</span> ${s.id}號 ${s.name} <span style="font-size:11px; color:#6b7280;">(${formatTime(s.todayFirstLapTime)} 抵達)</span></span>
+                    <span style="font-weight:bold; color:#2563eb;">今日 ${s.todayLaps||0} 圈</span>
                 </div>
             `).join('');
 
-            document.getElementById('femaleRankList').innerHTML = femaleList.map((s, index) => `
+            document.getElementById('femaleRankList').innerHTML = femaleList.length === 0 ? '<div style="color:#9ca3af; font-size:13px; text-align:center;">今日尚無紀錄</div>' : femaleList.map((s, index) => `
                 <div class="rank-item">
-                    <span><span class="rank-badge top-${index+1}">${index+1}</span> ${s.id}號 ${s.name} ${s.isLeave ? '(假)' : ''}</span>
-                    <span style="font-weight:bold; color:#db2777;">今日 ${s.todayLaps||0} 圈 <span style="font-size:11px; color:#9ca3af; font-weight:normal;">(總 ${s.totalLaps||0})</span></span>
+                    <span><span class="rank-badge top-${index+1}">${index+1}</span> ${s.id}號 ${s.name} <span style="font-size:11px; color:#6b7280;">(${formatTime(s.todayFirstLapTime)} 抵達)</span></span>
+                    <span style="font-weight:bold; color:#db2777;">今日 ${s.todayLaps||0} 圈</span>
                 </div>
             `).join('');
+        }
+
+        /* 💡 計算全班歷史「累計 Top 5 次數」 */
+        function calculateTop5Counts() {
+            const counts = {};
+            initialStudents.forEach(s => counts[s.id] = 0);
+
+            Object.keys(historyLogs).forEach(date => {
+                const dayData = historyLogs[date] || [];
+                const topBoys = dayData.filter(s => s.gender === '男' && (s.todayLaps || 0) > 0)
+                                       .sort((a,b) => (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity))
+                                       .slice(0, 5);
+                topBoys.forEach(b => { counts[b.id] = (counts[b.id] || 0) + 1; });
+
+                const topGirls = dayData.filter(s => s.gender === '女' && (s.todayLaps || 0) > 0)
+                                         .sort((a,b) => (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity))
+                                         .slice(0, 5);
+                topGirls.forEach(g => { counts[g.id] = (counts[g.id] || 0) + 1; });
+            });
+
+            return counts;
         }
 
         function prepareBackendPage() {
@@ -538,35 +588,51 @@
             renderHistoryRankings();
         }
 
+        /* 💡 後端歷史資料表格渲染：包含「當日限時圈」、「累計Top 5次數」、「累計限時圈」 */
         function renderHistoryRankings() {
             const dateVal = document.getElementById('historyDateSelect').value || currentWorkingDate;
             const targetData = historyLogs[dateVal] || students;
-            
+            const top5Counts = calculateTop5Counts();
+
             const sortedData = [...targetData].sort((a,b) => (b.todayLaps || 0) - (a.todayLaps || 0));
             const tbody = document.getElementById('historyTableBody');
             
-            tbody.innerHTML = sortedData.map((s, idx) => `
-                <tr>
-                    <td style="font-weight:bold;">${idx + 1}</td>
-                    <td>${s.id}</td>
-                    <td>${s.name}</td>
-                    <td>${s.gender}</td>
-                    <td style="font-weight:bold; color:#2563eb;">${s.todayLaps || 0}</td>
-                    <td style="color:#dc2626;">${s.todayLateLaps || 0}</td>
-                    <td>${s.isLeave ? '<span style="color:#ef4444;">請假</span>' : (s.todayLaps > 0 ? '<span style="color:#059669;">已完成</span>' : '<span style="color:#9ca3af;">未跑</span>')}</td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = sortedData.map((s, idx) => {
+                const validTodayLaps = Math.max(0, (s.todayLaps || 0) - (s.todayLateLaps || 0));
+                const validTotalLaps = Math.max(0, (s.totalLaps || 0) - (s.totalLateLaps || 0));
+                const topCount = top5Counts[s.id] || 0;
+
+                return `
+                    <tr>
+                        <td style="font-weight:bold;">${idx + 1}</td>
+                        <td>${s.id}</td>
+                        <td>${s.name}</td>
+                        <td>${s.gender}</td>
+                        <td style="font-weight:bold; color:#2563eb;">${s.todayLaps || 0}</td>
+                        <td style="color:#059669; font-weight:bold;">${validTodayLaps}</td>
+                        <td style="color:#dc2626;">${s.todayLateLaps || 0}</td>
+                        <td style="font-weight:bold; color:#d97706;">${topCount} 次</td>
+                        <td style="color:#2563eb;">${validTotalLaps} 圈</td>
+                        <td>${s.isLeave ? '<span style="color:#ef4444;">請假</span>' : (s.todayLaps > 0 ? '<span style="color:#059669;">已完成</span>' : '<span style="color:#9ca3af;">未跑</span>')}</td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         function exportCSV() {
             const dateVal = document.getElementById('historyDateSelect').value || currentWorkingDate;
             const targetData = historyLogs[dateVal] || students;
+            const top5Counts = calculateTop5Counts();
             const sortedData = [...targetData].sort((a,b) => (b.todayLaps || 0) - (a.todayLaps || 0));
 
-            let csvContent = "\uFEFF名次,座號,姓名,性別,當日總圈數,超時圈數,狀態\n";
+            let csvContent = "\uFEFF名次,座號,姓名,性別,當日總圈數,當日限時圈,超時圈數,累計Top5次數,累計限時圈,狀態\n";
             sortedData.forEach((s, idx) => {
+                const validTodayLaps = Math.max(0, (s.todayLaps || 0) - (s.todayLateLaps || 0));
+                const validTotalLaps = Math.max(0, (s.totalLaps || 0) - (s.totalLateLaps || 0));
+                const topCount = top5Counts[s.id] || 0;
                 const status = s.isLeave ? '請假' : (s.todayLaps > 0 ? '已完成' : '未跑');
-                csvContent += `${idx+1},${s.id},${s.name},${s.gender},${s.todayLaps||0},${s.todayLateLaps||0},${status}\n`;
+
+                csvContent += `${idx+1},${s.id},${s.name},${s.gender},${s.todayLaps||0},${validTodayLaps},${s.todayLateLaps||0},${topCount},${validTotalLaps},${status}\n`;
             });
 
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
