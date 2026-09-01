@@ -12,7 +12,7 @@
         h1 { color: #1a56db; font-size: 20px; margin: 0; }
         .settings-toggle { background: #e5e7eb; border: none; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; color: #374151; }
 
-        .date-tag { color: #6b7280; font-size: 12px; margin-bottom: 10px; }
+        .date-tag { color: #6b7280; font-size: 12px; margin-bottom: 10px; font-weight: bold; }
 
         /* 設定彈窗 */
         .settings-card { background: white; border: 2px solid #3b82f6; padding: 12px; border-radius: 10px; margin-bottom: 15px; display: none; }
@@ -37,15 +37,14 @@
 
         /* 限時關門控制區 */
         .timer-box { background: #fff3cd; border: 2px solid #ffeeba; padding: 10px; border-radius: 10px; text-align: center; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s; }
-        /* 💡 時間到的提醒樣式 */
         .timer-box.time-up { background: #fee2e2; border-color: #ef4444; }
         .timer-display { font-size: 20px; font-weight: bold; color: #856404; }
         .timer-box.time-up .timer-display { color: #dc2626; }
         .timer-btn { background: #d97706; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
         /* 記圈大按鈕區 */
-        .student-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 10px; }
-        .seat-card { position: relative; background: white; border: 2px solid #e5e7eb; border-radius: 10px; padding: 12px 5px 8px 5px; text-align: center; cursor: pointer; transition: all 0.2s; user-select: none; }
+        .student-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; }
+        .seat-card { position: relative; background: white; border: 2px solid #e5e7eb; border-radius: 10px; padding: 14px 5px 8px 5px; text-align: center; cursor: pointer; transition: all 0.2s; user-select: none; }
         .seat-card:active { transform: scale(0.95); }
         
         .seat-card.has-run { background: #e0f2fe; border-color: #2563eb; }
@@ -53,16 +52,19 @@
         
         .seat-card.on-leave { background: #f3f4f6; border-color: #d1d5db; opacity: 0.7; }
         .seat-card.on-leave .seat-name { color: #9ca3af; text-decoration: line-through; }
-        .seat-card.on-leave .today-laps { color: #ef4444; font-size: 11px; }
 
-        .leave-btn { position: absolute; top: 4px; right: 4px; font-size: 10px; padding: 2px 5px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; }
-        .leave-btn.is-off { background: #fee2e2; color: #dc2626; }
-        .leave-btn.is-on { background: #4b5563; color: white; }
+        /* 💡 控制按鈕：請假與扣圈 */
+        .card-btn { position: absolute; top: 3px; font-size: 10px; padding: 2px 4px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; }
+        .sub-btn { left: 3px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+        .leave-btn { right: 3px; }
+        .leave-btn.is-off { background: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; }
+        .leave-btn.is-on { background: #ef4444; color: white; }
 
-        .seat-num { font-size: 17px; font-weight: bold; color: #1f2937; }
-        .seat-name { font-size: 12px; color: #4b5563; margin-top: 2px; }
-        .today-laps { font-size: 13px; font-weight: bold; color: #059669; margin-top: 4px; }
-        .total-laps { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+        .seat-num { font-size: 17px; font-weight: bold; color: #1f2937; margin-top: 2px; }
+        .seat-name { font-size: 12px; color: #4b5563; margin-top: 1px; }
+        .today-laps { font-size: 12px; font-weight: bold; color: #059669; margin-top: 3px; }
+        .late-laps-tag { font-size: 10px; color: #dc2626; font-weight: normal; }
+        .total-laps { font-size: 11px; color: #9ca3af; margin-top: 1px; }
 
         /* 排行榜與表格 */
         .rank-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -73,7 +75,6 @@
         .top-2 { color: #4b5563; }
         .top-3 { color: #b45309; }
 
-        /* 後端表格專用樣式 */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
         th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: center; }
         th { background-color: #f3f4f6; color: #374151; }
@@ -89,22 +90,37 @@
     </div>
     <div class="date-tag" id="currentDateDisplay"></div>
 
-    <!-- 自訂參數面板 -->
+    <!-- 自訂參數與手動日期切換面板 -->
     <div class="settings-card" id="settingsCard">
         <div class="settings-group">
             <div style="font-weight:bold; color:#1a56db; margin-bottom:4px;">⚙️ 自訂參數設定</div>
+            
             <div class="settings-row">
-                <label>⏱️ 限時倒數 (分鐘):</label>
-                <input type="number" id="cfgTimer" class="settings-input" style="width: 70px;" value="5" min="1">
+                <label>📅 工作日期 (系統自動偵測):</label>
+                <div>
+                    <input type="date" id="cfgDate" class="settings-input" style="width: 120px;">
+                    <button onclick="resetToTodayDate()" style="font-size:11px; padding:3px 6px;">回到今天</button>
+                </div>
             </div>
+
+            <div class="settings-row">
+                <label>⏱️ 限時倒數設定:</label>
+                <div>
+                    <input type="number" id="cfgTimerMin" class="settings-input" style="width: 50px;" value="5" min="0"> 分
+                    <input type="number" id="cfgTimerSec" class="settings-input" style="width: 50px;" value="0" min="0" max="59"> 秒
+                </div>
+            </div>
+
             <div class="settings-row">
                 <label>🎯 全班解鎖總圈數:</label>
                 <input type="number" id="cfgTarget" class="settings-input" style="width: 80px;" value="500" min="1">
             </div>
+
             <div class="settings-row">
                 <label>🎁 解鎖獎品/特權名稱:</label>
                 <input type="text" id="cfgReward" class="settings-input" style="width: 140px;" value="換座位 / 播電影">
             </div>
+
             <button onclick="saveSettings()" style="background:#2563eb; color:white; border:none; padding:8px; border-radius:6px; font-weight:bold; margin-top:5px; cursor:pointer;">儲存設定</button>
         </div>
     </div>
@@ -118,7 +134,7 @@
         <div class="progress-bar-bg">
             <div class="progress-bar-fill" id="progressBar"></div>
         </div>
-        <div class="unlock-status" id="progressText">全班累積 0 / 500 圈 (還差 500 圈)</div>
+        <div class="unlock-status" id="progressText">全班累積有效 0 / 500 圈 (還差 500 圈)</div>
     </div>
 
     <!-- 分頁選單 -->
@@ -139,7 +155,7 @@
         </div>
 
         <div style="margin-bottom: 10px; color: #6b7280; font-size: 12px; text-align: center;">
-            點擊座號 +1 圈（時間到後仍可繼續點擊輸入）
+            點擊卡片 +1 圈｜點擊 [-1] 扣圈｜時間到後仍可登記(不計入目標500圈)
         </div>
         <div class="student-grid" id="studentGrid"></div>
     </div>
@@ -156,7 +172,7 @@
         </div>
     </div>
 
-    <!-- 💡 頁面 3：後端每日跑步排名與歷史紀錄專區 -->
+    <!-- 頁面 3：後端歷史數據 -->
     <div id="backend-page" class="page">
         <div class="rank-card">
             <div class="rank-title">
@@ -179,6 +195,7 @@
                             <th>姓名</th>
                             <th>性別</th>
                             <th>當日圈數</th>
+                            <th>超時圈數</th>
                             <th>狀態</th>
                         </tr>
                     </thead>
@@ -192,80 +209,120 @@
 
     <script>
         const initialStudents = [
-            { id: 1, name: "李心彤", gender: "女", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 2, name: "林靚", gender: "女", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 3, name: "邱苡姮", gender: "女", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 4, name: "洪喬恩", gender: "女", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 5, name: "張家恩", gender: "女", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 6, name: "張鈺暄", gender: "女", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 7, name: "許云柔", gender: "女", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 8, name: "陳品慈", gender: "女", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 9, name: "陳禹霏", gender: "女", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 10, name: "陳臻", gender: "女", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 11, name: "游昕瞳", gender: "女", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 12, name: "黃禹蓁", gender: "女", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 13, name: "楊婕妤", gender: "女", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 14, name: "謝羽妮", gender: "女", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 15, name: "李禹柔", gender: "女", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 16, name: "王翊丞", gender: "男", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 17, name: "朱天佑", gender: "男", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 18, name: "林長存", gender: "男", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 19, name: "林祐興", gender: "男", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 20, name: "林航辰", gender: "男", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 21, name: "洪翊晉", gender: "男", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 22, name: "范容瑞", gender: "男", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 23, name: "徐國舜", gender: "男", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 24, name: "張宗祐", gender: "男", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 25, name: "張泓傅", gender: "男", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 26, name: "陳東昇", gender: "男", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 27, name: "陳彥宇", gender: "男", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 28, name: "廖佐熙", gender: "男", todayLaps: 0, totalLaps: 0, isLeave: false },
-            { id: 29, name: "鄭楷霖", gender: "男", todayLaps: 0, totalLaps: 0, isLeave: false }
+            { id: 1, name: "李心彤", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 2, name: "林靚", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 3, name: "邱苡姮", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 4, name: "洪喬恩", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 5, name: "張家恩", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 6, name: "張鈺暄", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 7, name: "許云柔", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 8, name: "陳品慈", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 9, name: "陳禹霏", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 10, name: "陳臻", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 11, name: "游昕瞳", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 12, name: "黃禹蓁", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 13, name: "楊婕妤", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 14, name: "謝羽妮", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 15, name: "李禹柔", gender: "女", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 16, name: "王翊丞", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 17, name: "朱天佑", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 18, name: "林長存", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 19, name: "林祐興", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 20, name: "林航辰", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 21, name: "洪翊晉", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 22, name: "范容瑞", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 23, name: "徐國舜", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 24, name: "張宗祐", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 25, name: "張泓傅", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 26, name: "陳東昇", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 27, name: "陳彥宇", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 28, name: "廖佐熙", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false },
+            { id: 29, name: "鄭楷霖", gender: "男", todayLaps: 0, todayLateLaps: 0, totalLaps: 0, totalLateLaps: 0, isLeave: false }
         ];
 
-        const todayStr = new Date().toLocaleDateString('zh-TW');
-        document.getElementById('currentDateDisplay').innerText = `今天是 ${todayStr}`;
+        // 💡 1. 日期自動偵測與格式化
+        const getSystemTodayDateStr = () => {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        let currentWorkingDate = localStorage.getItem('running_active_date') || getSystemTodayDateStr();
 
         let config = JSON.parse(localStorage.getItem('running_config')) || {
-            timerMinutes: 5,
+            timerMin: 5,
+            timerSec: 0,
             targetLaps: 500,
             rewardText: "換座位 / 播電影"
         };
 
-        let lastDate = localStorage.getItem('running_date');
-        let students = JSON.parse(localStorage.getItem('running_data')) || initialStudents;
         let historyLogs = JSON.parse(localStorage.getItem('running_history')) || {};
+        let students = historyLogs[currentWorkingDate] || JSON.parse(localStorage.getItem('running_data')) || initialStudents;
 
-        if (lastDate !== todayStr) {
-            students.forEach(s => { s.todayLaps = 0; s.isLeave = false; });
-            localStorage.setItem('running_date', todayStr);
-            localStorage.setItem('running_data', JSON.stringify(students));
+        function updateDateUI() {
+            document.getElementById('currentDateDisplay').innerText = `📅 當前紀錄日期：${currentWorkingDate}`;
+            document.getElementById('cfgDate').value = currentWorkingDate;
         }
 
-        document.getElementById('cfgTimer').value = config.timerMinutes;
+        function resetToTodayDate() {
+            currentWorkingDate = getSystemTodayDateStr();
+            switchWorkingDate(currentWorkingDate);
+        }
+
+        function switchWorkingDate(newDate) {
+            currentWorkingDate = newDate;
+            localStorage.setItem('running_active_date', currentWorkingDate);
+            
+            // 載入該日期的數據，若不存在則新初始化
+            if (historyLogs[currentWorkingDate]) {
+                students = historyLogs[currentWorkingDate];
+            } else {
+                students = students.map(s => ({
+                    ...s,
+                    todayLaps: 0,
+                    todayLateLaps: 0,
+                    isLeave: false
+                }));
+            }
+            saveData();
+            updateDateUI();
+            renderGrid();
+        }
+
+        // 初始化設定介面數值
+        document.getElementById('cfgTimerMin').value = config.timerMin;
+        document.getElementById('cfgTimerSec').value = config.timerSec;
         document.getElementById('cfgTarget').value = config.targetLaps;
         document.getElementById('cfgReward').value = config.rewardText;
         document.getElementById('displayReward').innerText = config.rewardText;
 
-        let timeLeft = config.timerMinutes * 60;
+        /* 💡 2. 計時器（精確到秒與超時標記） */
+        let timeLeft = (config.timerMin * 60) + config.timerSec;
         let timerInterval = null;
+        let isTimeUp = false;
 
         function toggleSettings() {
             document.getElementById('settingsCard').classList.toggle('active');
         }
 
         function saveSettings() {
-            config.timerMinutes = parseInt(document.getElementById('cfgTimer').value) || 5;
+            const selectedDate = document.getElementById('cfgDate').value;
+            if (selectedDate && selectedDate !== currentWorkingDate) {
+                switchWorkingDate(selectedDate);
+            }
+
+            config.timerMin = parseInt(document.getElementById('cfgTimerMin').value) || 0;
+            config.timerSec = parseInt(document.getElementById('cfgTimerSec').value) || 0;
             config.targetLaps = parseInt(document.getElementById('cfgTarget').value) || 500;
             config.rewardText = document.getElementById('cfgReward').value || "特權獎品";
 
             localStorage.setItem('running_config', JSON.stringify(config));
             document.getElementById('displayReward').innerText = config.rewardText;
 
-            timeLeft = config.timerMinutes * 60;
-            updateTimerDisplay();
+            resetTimerState();
             updateProgressBar();
-            
             toggleSettings();
             showToast("⚙️ 設定已成功儲存！");
         }
@@ -293,25 +350,26 @@
         }
 
         function resetTimerState() {
-            timeLeft = config.timerMinutes * 60;
+            timeLeft = (config.timerMin * 60) + config.timerSec;
+            isTimeUp = false;
             const timerBox = document.getElementById('timerBox');
             timerBox.classList.remove('time-up');
             document.getElementById('timerLabel').innerText = "⏱️ 限時關門倒數";
+            updateTimerDisplay();
         }
 
-        /* 💡 提醒圖示與警示面板 */
         function triggerTimeUpAlert() {
+            isTimeUp = true;
             const timerBox = document.getElementById('timerBox');
             timerBox.classList.add('time-up');
-            document.getElementById('timerLabel').innerText = "🚨 時間到！(已關門，仍可繼續點擊記圈)";
-            showToast("🚨 限時結束！已關門！");
+            document.getElementById('timerLabel').innerText = "🚨 時間到！(已關門，繼續登記屬超時圈數)";
+            showToast("🚨 限時結束！進入超時登記模式！");
         }
 
         function updateTimerDisplay() {
             const m = String(Math.floor(Math.max(0, timeLeft) / 60)).padStart(2, '0');
             const s = String(Math.max(0, timeLeft) % 60).padStart(2, '0');
-            const display = document.getElementById('timerDisplay');
-            display.innerText = `${m}:${s}`;
+            document.getElementById('timerDisplay').innerText = `${m}:${s}`;
         }
 
         function switchTab(pageId) {
@@ -333,18 +391,44 @@
                 card.className = `seat-card ${s.todayLaps > 0 ? 'has-run' : ''} ${isLeave ? 'on-leave' : ''}`;
                 card.onclick = () => addLap(s.id);
                 
+                const lateText = (s.todayLateLaps || 0) > 0 ? `<span class="late-laps-tag">(超時${s.todayLateLaps})</span>` : '';
+
                 card.innerHTML = `
-                    <button class="leave-btn ${isLeave ? 'is-on' : 'is-off'}" onclick="toggleLeave(event, ${s.id})">
+                    <button class="card-btn sub-btn" onclick="subtractLap(event, ${s.id})">-1</button>
+                    <button class="card-btn leave-btn ${isLeave ? 'is-on' : 'is-off'}" onclick="toggleLeave(event, ${s.id})">
                         ${isLeave ? '取消假' : '請假'}
                     </button>
                     <div class="seat-num">${s.id}號</div>
                     <div class="seat-name">${s.name}</div>
-                    <div class="today-laps">${isLeave ? '【今日請假】' : `今日 ${s.todayLaps || 0} 圈`}</div>
+                    <div class="today-laps">${isLeave ? '【今日請假】' : `今日 ${s.todayLaps || 0} 圈 ${lateText}`}</div>
                     <div class="total-laps">累計 ${s.totalLaps || 0} 圈</div>
                 `;
                 grid.appendChild(card);
             });
             updateProgressBar();
+        }
+
+        /* 💡 3. 扣圈/減圈功能 (-1) */
+        function subtractLap(event, id) {
+            event.stopPropagation();
+            const student = students.find(s => s.id === id);
+            if (!student || (student.todayLaps || 0) <= 0) {
+                showToast("⚠️ 圈數已為 0，無法再扣除！");
+                return;
+            }
+
+            student.todayLaps -= 1;
+            student.totalLaps = Math.max(0, (student.totalLaps || 0) - 1);
+
+            // 若有超時圈數，優先扣除超時圈數
+            if ((student.todayLateLaps || 0) > 0) {
+                student.todayLateLaps -= 1;
+                student.totalLateLaps = Math.max(0, (student.totalLateLaps || 0) - 1);
+            }
+
+            saveData();
+            renderGrid();
+            showToast(`已幫 ${student.id}號 ${student.name} 扣除 1 圈！`);
         }
 
         function toggleLeave(event, id) {
@@ -358,7 +442,7 @@
             }
         }
 
-        /* 💡 允許時間到後順暢繼續輸入（移除 confirm 阻擋） */
+        /* 💡 4. 加圈功能 (區分超時圈數與準時圈數) */
         function addLap(id) {
             const student = students.find(s => s.id === id);
             if (!student) return;
@@ -367,41 +451,45 @@
                 if(!confirm(`⚠️ ${student.id}號 ${student.name} 今日已被標記為「請假」，確定要幫他/她登記圈數嗎？`)) return;
             }
 
-            // 重複點擊二度確認，避免連續手滑誤按
-            if ((student.todayLaps || 0) > 0) {
-                const confirmMsg = `⚠️ ${student.id}號 ${student.name} 今天已經跑過 ${student.todayLaps} 圈囉！\n確定要再 +1 圈嗎？`;
-                if (!confirm(confirmMsg)) return;
-            }
-
             student.todayLaps = (student.todayLaps || 0) + 1;
             student.totalLaps = (student.totalLaps || 0) + 1;
+
+            if (isTimeUp || timeLeft <= 0) {
+                student.todayLateLaps = (student.todayLateLaps || 0) + 1;
+                student.totalLateLaps = (student.totalLateLaps || 0) + 1;
+                showToast(`🚨 ${student.id}號 ${student.name} +1 圈 (超時，不計入全班500圈目標)`);
+            } else {
+                showToast(`⚡ ${student.id}號 ${student.name} +1 圈！`);
+            }
+
             saveData();
             renderGrid();
-            showToast(`${student.id}號 ${student.name} +1 圈！(今日共 ${student.todayLaps} 圈)`);
         }
 
+        /* 💡 全班 500 圈目標計算：排除超時圈數 (totalLateLaps) */
         function updateProgressBar() {
-            const totalClassLaps = students.reduce((sum, s) => sum + (s.totalLaps || 0), 0);
+            const validClassLaps = students.reduce((sum, s) => {
+                const validLaps = (s.totalLaps || 0) - (s.totalLateLaps || 0);
+                return sum + Math.max(0, validLaps);
+            }, 0);
+
             const target = config.targetLaps || 500;
-            const percent = Math.min(100, Math.round((totalClassLaps / target) * 100));
+            const percent = Math.min(100, Math.round((validClassLaps / target) * 100));
             
             document.getElementById('progressBar').style.width = `${percent}%`;
             document.getElementById('progressPercent').innerText = `${percent}%`;
             
-            const remaining = Math.max(0, target - totalClassLaps);
+            const remaining = Math.max(0, target - validClassLaps);
             if (remaining === 0) {
-                document.getElementById('progressText').innerText = `🎉 恭喜！全班已達成 ${target} 圈目標！解鎖：${config.rewardText}`;
+                document.getElementById('progressText').innerText = `🎉 恭喜！全班已達成 ${target} 圈有效目標！解鎖：${config.rewardText}`;
             } else {
-                document.getElementById('progressText').innerText = `全班累積 ${totalClassLaps} / ${target} 圈 (還差 ${remaining} 圈)`;
+                document.getElementById('progressText').innerText = `全班有效累積 ${validClassLaps} / ${target} 圈 (還差 ${remaining} 圈)`;
             }
         }
 
         function saveData() {
             localStorage.setItem('running_data', JSON.stringify(students));
-            localStorage.setItem('running_date', todayStr);
-
-            // 💡 後端備份：將今日最新狀態寫入歷史 Log
-            historyLogs[todayStr] = JSON.parse(JSON.stringify(students));
+            historyLogs[currentWorkingDate] = JSON.parse(JSON.stringify(students));
             localStorage.setItem('running_history', JSON.stringify(historyLogs));
         }
 
@@ -431,19 +519,19 @@
             `).join('');
         }
 
-        /* 💡 後端歷史數據與表格渲染 */
         function prepareBackendPage() {
             const select = document.getElementById('historyDateSelect');
             select.innerHTML = '';
             
             let dates = Object.keys(historyLogs);
-            if (!dates.includes(todayStr)) dates.push(todayStr);
-            dates.sort().reverse(); // 最新日期排最前
+            if (!dates.includes(currentWorkingDate)) dates.push(currentWorkingDate);
+            dates.sort().reverse();
 
             dates.forEach(d => {
                 const opt = document.createElement('option');
                 opt.value = d;
                 opt.innerText = d;
+                if(d === currentWorkingDate) opt.selected = true;
                 select.appendChild(opt);
             });
 
@@ -451,10 +539,9 @@
         }
 
         function renderHistoryRankings() {
-            const dateVal = document.getElementById('historyDateSelect').value || todayStr;
+            const dateVal = document.getElementById('historyDateSelect').value || currentWorkingDate;
             const targetData = historyLogs[dateVal] || students;
             
-            // 依據當日圈數從大到小排序
             const sortedData = [...targetData].sort((a,b) => (b.todayLaps || 0) - (a.todayLaps || 0));
             const tbody = document.getElementById('historyTableBody');
             
@@ -465,30 +552,31 @@
                     <td>${s.name}</td>
                     <td>${s.gender}</td>
                     <td style="font-weight:bold; color:#2563eb;">${s.todayLaps || 0}</td>
+                    <td style="color:#dc2626;">${s.todayLateLaps || 0}</td>
                     <td>${s.isLeave ? '<span style="color:#ef4444;">請假</span>' : (s.todayLaps > 0 ? '<span style="color:#059669;">已完成</span>' : '<span style="color:#9ca3af;">未跑</span>')}</td>
                 </tr>
             `).join('');
         }
 
-        /* 💡 匯出 CSV 表格功能 */
         function exportCSV() {
-            const dateVal = document.getElementById('historyDateSelect').value || todayStr;
+            const dateVal = document.getElementById('historyDateSelect').value || currentWorkingDate;
             const targetData = historyLogs[dateVal] || students;
             const sortedData = [...targetData].sort((a,b) => (b.todayLaps || 0) - (a.todayLaps || 0));
 
-            let csvContent = "\uFEFF名次,座號,姓名,性別,當日圈數,狀態\n";
+            let csvContent = "\uFEFF名次,座號,姓名,性別,當日總圈數,超時圈數,狀態\n";
             sortedData.forEach((s, idx) => {
                 const status = s.isLeave ? '請假' : (s.todayLaps > 0 ? '已完成' : '未跑');
-                csvContent += `${idx+1},${s.id},${s.name},${s.gender},${s.todayLaps||0},${status}\n`;
+                csvContent += `${idx+1},${s.id},${s.name},${s.gender},${s.todayLaps||0},${s.todayLateLaps||0},${status}\n`;
             });
 
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = `健促跑步排名_${dateVal.replace(/\//g, '-')}.csv`;
+            link.download = `健促跑步紀錄_${dateVal}.csv`;
             link.click();
         }
 
+        updateDateUI();
         updateTimerDisplay();
         renderGrid();
     </script>
