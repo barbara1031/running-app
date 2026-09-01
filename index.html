@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>班級健促跑步追蹤器</title>
+    <title>班級健促跑步追蹤器 (雲端同步版)</title>
+    
+    <!-- 引入 Firebase SDK (Compat 版本，適用於純 HTML 靜態網頁) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
     <style>
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { margin: 0; padding: 15px; background-color: #f4f6f9; color: #333; }
@@ -13,6 +18,12 @@
         .settings-toggle { background: #e5e7eb; border: none; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; color: #374151; }
 
         .date-tag { color: #6b7280; font-size: 12px; margin-bottom: 10px; font-weight: bold; }
+
+        /* 學生模式提示條 */
+        .student-banner { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; text-align: center; margin-bottom: 10px; display: none; }
+
+        /* 連線狀態提示條 */
+        .sync-status { background: #d1fae5; color: #065f46; font-size: 11px; padding: 4px 8px; border-radius: 4px; text-align: center; margin-bottom: 10px; font-weight: bold; }
 
         /* 設定彈窗 */
         .settings-card { background: white; border: 2px solid #3b82f6; padding: 12px; border-radius: 10px; margin-bottom: 15px; display: none; }
@@ -79,11 +90,9 @@
         th, td { border: 1px solid #e5e7eb; padding: 6px 4px; text-align: center; }
         th { background-color: #f3f4f6; color: #374151; white-space: nowrap; }
 
-        /* 💡 可點擊連結樣式 */
         .clickable-link { color: #2563eb; text-decoration: underline; cursor: pointer; font-weight: bold; }
         .clickable-link:hover { color: #1d4ed8; }
 
-        /* 💡 Modal 彈窗樣式 */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-card { background: white; width: 90%; max-width: 420px; max-height: 80vh; border-radius: 12px; padding: 18px; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 12px; }
@@ -97,9 +106,11 @@
 
     <div class="header-bar">
         <h1>🏃‍♂️ 班級健促跑步追蹤</h1>
-        <button class="settings-toggle" onclick="toggleSettings()">⚙️ 設定目標</button>
+        <button class="settings-toggle" id="settingsToggleBtn" onclick="toggleSettings()">⚙️ 設定目標</button>
     </div>
     <div class="date-tag" id="currentDateDisplay"></div>
+    <div class="sync-status" id="syncStatus">☁️ 雲端同步中...</div>
+    <div class="student-banner" id="studentBanner">👀 目前為「學生瀏覽模式」（純觀看，無法登記圈數）</div>
 
     <!-- 自訂參數面板 -->
     <div class="settings-card" id="settingsCard">
@@ -150,9 +161,9 @@
 
     <!-- 分頁選單 -->
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('input-page')">⚡ 快速記圈</button>
-        <button class="tab-btn" onclick="switchTab('rank-page')">🏆 今日 Top 5</button>
-        <button class="tab-btn" onclick="switchTab('backend-page')">📊 後端數據</button>
+        <button class="tab-btn active" id="inputTabBtn" onclick="switchTab('input-page')">⚡ 快速記圈</button>
+        <button class="tab-btn" id="rankTabBtn" onclick="switchTab('rank-page')">🏆 今日 Top 5</button>
+        <button class="tab-btn" id="backendTabBtn" onclick="switchTab('backend-page')">📊 後端數據</button>
     </div>
 
     <!-- 頁面 1：記圈 + 限時關門 -->
@@ -189,7 +200,7 @@
         </div>
     </div>
 
-    <!-- 頁面 3：後端歷史數據 (可切換 3 種排序方式) -->
+    <!-- 頁面 3：後端歷史數據 -->
     <div id="backend-page" class="page">
         <div class="rank-card">
             <div class="rank-title">
@@ -236,7 +247,7 @@
         </div>
     </div>
 
-    <!-- 💡 明細彈窗 (Modal) -->
+    <!-- 明細彈窗 -->
     <div id="detailModal" class="modal-overlay">
         <div class="modal-card">
             <div class="modal-header">
@@ -250,6 +261,24 @@
     <div id="toast" class="toast">已成功 +1 圈！</div>
 
     <script>
+        // 💡 1. 填入你剛才提供給我的專屬 Firebase 金鑰設定檔
+        const firebaseConfig = {
+            apiKey: "AIzaSyAbQ1UxwWWOYP64pMGAcQJlikdadOFJmj0",
+            authDomain: "running-app-ce6e2.firebaseapp.com",
+            projectId: "running-app-ce6e2",
+            storageBucket: "running-app-ce6e2.firebasestorage.app",
+            messagingSenderId: "492999401691",
+            appId: "1:492999401691:web:319ad5d1761a02f27cecfe"
+        };
+
+        // 初始化 Firebase Firestore 雲端資料庫
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // 💡 檢查 URL 是否帶有 view=student 學生模式標籤
+        const urlParams = new URLSearchParams(window.location.search);
+        const isStudentMode = urlParams.get('view') === 'student' || urlParams.get('mode') === 'student';
+
         const initialStudents = [
             { id: 1, name: "李心彤", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
             { id: 2, name: "林靚", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, totalLaps: 0, totalLateLaps: 0, isLeave: false },
@@ -290,17 +319,10 @@
             return `${year}-${month}-${day}`;
         };
 
-        let currentWorkingDate = localStorage.getItem('running_active_date') || getSystemTodayDateStr();
-
-        let config = JSON.parse(localStorage.getItem('running_config')) || {
-            timerMin: 5,
-            timerSec: 0,
-            targetLaps: 500,
-            rewardText: "換座位 / 播電影"
-        };
-
-        let historyLogs = JSON.parse(localStorage.getItem('running_history')) || {};
-        let students = historyLogs[currentWorkingDate] || JSON.parse(localStorage.getItem('running_data')) || JSON.parse(JSON.stringify(initialStudents));
+        let currentWorkingDate = getSystemTodayDateStr();
+        let config = { timerMin: 5, timerSec: 0, targetLaps: 500, rewardText: "換座位 / 播電影" };
+        let historyLogs = {};
+        let students = JSON.parse(JSON.stringify(initialStudents));
 
         function updateDateUI() {
             document.getElementById('currentDateDisplay').innerText = `📅 當前紀錄日期：${currentWorkingDate}`;
@@ -314,8 +336,6 @@
 
         function switchWorkingDate(newDate) {
             currentWorkingDate = newDate;
-            localStorage.setItem('running_active_date', currentWorkingDate);
-            
             if (historyLogs[currentWorkingDate]) {
                 students = historyLogs[currentWorkingDate];
             } else {
@@ -332,17 +352,51 @@
             renderGrid();
         }
 
-        document.getElementById('cfgTimerMin').value = config.timerMin;
-        document.getElementById('cfgTimerSec').value = config.timerSec;
-        document.getElementById('cfgTarget').value = config.targetLaps;
-        document.getElementById('cfgReward').value = config.rewardText;
-        document.getElementById('displayReward').innerText = config.rewardText;
+        /* 💡 2. 雲端資料庫（Firestore）即時同步監聽機制 */
+        db.collection("running_tracker").doc("main_store")
+          .onSnapshot((doc) => {
+              if (doc.exists) {
+                  const cloudData = doc.data();
+                  if (cloudData.config) config = cloudData.config;
+                  if (cloudData.currentWorkingDate) currentWorkingDate = cloudData.currentWorkingDate;
+                  if (cloudData.historyLogs) historyLogs = cloudData.historyLogs;
+                  if (historyLogs[currentWorkingDate]) {
+                      students = historyLogs[currentWorkingDate];
+                  }
+
+                  // 更新介面
+                  document.getElementById('cfgTimerMin').value = config.timerMin;
+                  document.getElementById('cfgTimerSec').value = config.timerSec;
+                  document.getElementById('cfgTarget').value = config.targetLaps;
+                  document.getElementById('cfgReward').value = config.rewardText;
+                  document.getElementById('displayReward').innerText = config.rewardText;
+                  
+                  updateDateUI();
+                  renderGrid();
+                  renderRankings();
+                  if (document.getElementById('backend-page').classList.contains('active')) {
+                      prepareBackendPage();
+                  }
+
+                  document.getElementById('syncStatus').innerText = "🟢 雲端已即時連線同步";
+                  document.getElementById('syncStatus').style.background = "#d1fae5";
+                  document.getElementById('syncStatus').style.color = "#065f46";
+              } else {
+                  saveData(); // 首度使用寫入預設結構
+              }
+          }, (error) => {
+              console.error("Cloud sync error:", error);
+              document.getElementById('syncStatus').innerText = "⚠️ 雲端連線失敗，請檢查網路";
+              document.getElementById('syncStatus').style.background = "#fee2e2";
+              document.getElementById('syncStatus').style.color = "#dc2626";
+          });
 
         let timeLeft = (config.timerMin * 60) + config.timerSec;
         let timerInterval = null;
         let isTimeUp = false;
 
         function toggleSettings() {
+            if (isStudentMode) return;
             document.getElementById('settingsCard').classList.toggle('active');
         }
 
@@ -357,16 +411,14 @@
             config.targetLaps = parseInt(document.getElementById('cfgTarget').value) || 500;
             config.rewardText = document.getElementById('cfgReward').value || "特權獎品";
 
-            localStorage.setItem('running_config', JSON.stringify(config));
-            document.getElementById('displayReward').innerText = config.rewardText;
-
             resetTimerState();
-            updateProgressBar();
+            saveData();
             toggleSettings();
-            showToast("⚙️ 設定已成功儲存！");
+            showToast("⚙️ 設定已成功儲存並同步至雲端！");
         }
 
         function toggleTimer() {
+            if (isStudentMode) return;
             const btn = document.getElementById('timerBtn');
             if (timerInterval) {
                 clearInterval(timerInterval);
@@ -414,8 +466,12 @@
         function switchTab(pageId) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(pageId).classList.add('active');
-            event.target.classList.add('active');
+            
+            const targetPage = document.getElementById(pageId);
+            if (targetPage) targetPage.classList.add('active');
+
+            const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick')?.includes(pageId));
+            if (activeBtn) activeBtn.classList.add('active');
             
             if (pageId === 'rank-page') renderRankings();
             if (pageId === 'backend-page') prepareBackendPage();
@@ -437,15 +493,21 @@
                 const isLeave = s.isLeave || false;
                 const card = document.createElement('div');
                 card.className = `seat-card ${s.todayLaps > 0 ? 'has-run' : ''} ${isLeave ? 'on-leave' : ''}`;
-                card.onclick = () => addLap(s.id);
+                
+                if (!isStudentMode) {
+                    card.onclick = () => addLap(s.id);
+                }
                 
                 const lateText = (s.todayLateLaps || 0) > 0 ? `<span class="late-laps-tag">(超時${s.todayLateLaps})</span>` : '';
-
-                card.innerHTML = `
+                const btnControls = isStudentMode ? '' : `
                     <button class="card-btn sub-btn" onclick="subtractLap(event, ${s.id})">-1</button>
                     <button class="card-btn leave-btn ${isLeave ? 'is-on' : 'is-off'}" onclick="toggleLeave(event, ${s.id})">
                         ${isLeave ? '取消假' : '請假'}
                     </button>
+                `;
+
+                card.innerHTML = `
+                    ${btnControls}
                     <div class="seat-num">${s.id}號</div>
                     <div class="seat-name">${s.name}</div>
                     <div class="today-laps">${isLeave ? '【今日請假】' : `今日 ${s.todayLaps || 0} 圈 ${lateText}`}</div>
@@ -457,6 +519,7 @@
         }
 
         function subtractLap(event, id) {
+            if (isStudentMode) return;
             event.stopPropagation();
             const student = students.find(s => s.id === id);
             if (!student || (student.todayLaps || 0) <= 0) {
@@ -477,22 +540,22 @@
             }
 
             saveData();
-            renderGrid();
             showToast(`已幫 ${student.id}號 ${student.name} 扣除 1 圈！`);
         }
 
         function toggleLeave(event, id) {
+            if (isStudentMode) return;
             event.stopPropagation();
             const student = students.find(s => s.id === id);
             if (student) {
                 student.isLeave = !student.isLeave;
                 saveData();
-                renderGrid();
                 showToast(`${student.id}號 ${student.name} ${student.isLeave ? '已標記請假' : '已取消請假'}`);
             }
         }
 
         function addLap(id) {
+            if (isStudentMode) return;
             const student = students.find(s => s.id === id);
             if (!student) return;
 
@@ -516,7 +579,6 @@
             }
 
             saveData();
-            renderGrid();
         }
 
         function updateProgressBar() {
@@ -539,10 +601,22 @@
             }
         }
 
+        /* 💡 將變更寫入 Firebase 雲端資料庫 */
         function saveData() {
-            localStorage.setItem('running_data', JSON.stringify(students));
+            if (isStudentMode) return;
+            
             historyLogs[currentWorkingDate] = JSON.parse(JSON.stringify(students));
-            localStorage.setItem('running_history', JSON.stringify(historyLogs));
+
+            db.collection("running_tracker").doc("main_store").set({
+                config: config,
+                currentWorkingDate: currentWorkingDate,
+                historyLogs: historyLogs,
+                lastUpdated: Date.now()
+            }).then(() => {
+                console.log("Cloud save successful!");
+            }).catch(err => {
+                console.error("Cloud save failed:", err);
+            });
         }
 
         function showToast(msg) {
@@ -667,7 +741,6 @@
             }).join('');
         }
 
-        /* 💡 彈窗明細邏輯：看是哪幾天登上 Top 5 */
         function showTop5Detail(studentId) {
             const student = initialStudents.find(s => s.id === studentId);
             if (!student) return;
@@ -725,7 +798,6 @@
             document.getElementById('detailModal').style.display = 'flex';
         }
 
-        /* 💡 彈窗明細邏輯：看是哪幾天累積的圈數 */
         function showLapsDetail(studentId) {
             const student = initialStudents.find(s => s.id === studentId);
             if (!student) return;
@@ -820,8 +892,17 @@
             link.click();
         }
 
-        updateDateUI();
-        updateTimerDisplay();
+        // 💡 學生模式初始化處理
+        if (isStudentMode) {
+            document.getElementById('studentBanner').style.display = 'block';
+            document.getElementById('settingsToggleBtn').style.display = 'none';
+            document.getElementById('inputTabBtn').style.display = 'none';
+            switchTab('rank-page');
+        } else {
+            updateDateUI();
+            updateTimerDisplay();
+        }
+
         renderGrid();
     </script>
 </body>
