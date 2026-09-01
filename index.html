@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>班級健促跑步追蹤器</title>
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { margin: 0; padding: 15px; background-color: #f4f6f9; color: #333; }
+        h1 { text-align: center; color: #1a56db; font-size: 22px; margin: 0 0 5px 0; }
+        .date-tag { text-align: center; color: #6b7280; font-size: 13px; margin-bottom: 12px; }
+
+        /* 全班解鎖進度條卡片 */
+        .unlock-card { background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .unlock-title { font-size: 14px; font-weight: bold; display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .progress-bar-bg { background: rgba(255,255,255,0.25); height: 16px; border-radius: 8px; overflow: hidden; position: relative; }
+        .progress-bar-fill { background: #34d399; height: 100%; width: 0%; transition: width 0.5s ease-in-out; }
+        .unlock-status { font-size: 12px; margin-top: 6px; text-align: right; opacity: 0.9; }
+
+        /* 分頁切換 */
+        .tabs { display: flex; gap: 8px; margin-bottom: 15px; }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: #e0e6ed; font-size: 14px; font-weight: bold; border-radius: 8px; cursor: pointer; color: #4b5563; }
+        .tab-btn.active { background: #1a56db; color: white; }
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* 限時關門控制區 */
+        .timer-box { background: #fff3cd; border: 1px solid #ffeeba; padding: 10px; border-radius: 10px; text-align: center; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .timer-display { font-size: 20px; font-weight: bold; color: #856404; }
+        .timer-btn { background: #d97706; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+        /* 記圈大按鈕區 */
+        .student-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 10px; }
+        .seat-card { background: white; border: 2px solid #e5e7eb; border-radius: 10px; padding: 10px 5px; text-align: center; cursor: pointer; transition: transform 0.1s; user-select: none; }
+        .seat-card:active { transform: scale(0.95); background: #dbeafe; }
+        .seat-num { font-size: 18px; font-weight: bold; color: #1f2937; }
+        .seat-name { font-size: 12px; color: #4b5563; margin-top: 2px; }
+        .today-laps { font-size: 14px; font-weight: bold; color: #059669; margin-top: 4px; }
+        .total-laps { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+        /* 排行榜專區 */
+        .rank-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .rank-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .rank-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+        .rank-badge { font-weight: bold; width: 20px; }
+        .top-1 { color: #d97706; }
+        .top-2 { color: #4b5563; }
+        .top-3 { color: #b45309; }
+
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #10b981; color: white; padding: 10px 20px; border-radius: 20px; font-weight: bold; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 99; }
+    </style>
+</head>
+<body>
+
+    <h1>🏃‍♂️ 班級健促跑步追蹤器</h1>
+    <div class="date-tag" id="currentDateDisplay"></div>
+
+    <!-- 頂部：全班目標解鎖卡片 -->
+    <div class="unlock-card">
+        <div class="unlock-title">
+            <span>🎯 全班解鎖目標：換座位 / 播電影</span>
+            <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progressBar"></div>
+        </div>
+        <div class="unlock-status" id="progressText">全班累積 0 / 500 圈 (還差 500 圈)</div>
+    </div>
+
+    <!-- 分頁選單 -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('input-page')">⚡ 快速記圈</button>
+        <button class="tab-btn" onclick="switchTab('rank-page')">🏆 今日 Top 5</button>
+    </div>
+
+    <!-- 頁面 1：記圈 + 限時關門 -->
+    <div id="input-page" class="page active">
+        <div class="timer-box">
+            <div>
+                <span style="font-size: 13px; color: #856404; display: block;">⏱️ 限時關門倒數</span>
+                <span class="timer-display" id="timerDisplay">05:00</span>
+            </div>
+            <button class="timer-btn" id="timerBtn" onclick="toggleTimer()">開始計時</button>
+        </div>
+
+        <div style="margin-bottom: 10px; color: #6b7280; font-size: 12px; text-align: center;">
+            請在關門前跑完！點擊座號直接 +1 圈
+        </div>
+        <div class="student-grid" id="studentGrid"></div>
+    </div>
+
+    <!-- 頁面 2：今日男女 Top 5 -->
+    <div id="rank-page" class="page">
+        <div class="rank-card">
+            <div class="rank-title" style="color: #2563eb;">👦 男生今日 Top 5</div>
+            <div id="maleRankList"></div>
+        </div>
+        <div class="rank-card">
+            <div class="rank-title" style="color: #db2777;">👧 女生今日 Top 5</div>
+            <div id="femaleRankList"></div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">已成功 +1 圈！</div>
+
+    <script>
+        const TARGET_LAPS = 500; // 全班目標總圈數 (可自行修改)
+
+        const initialStudents = [
+            { id: 1, name: "李心彤", gender: "女", todayLaps: 0, totalLaps: 0 },
+            { id: 2, name: "林靚", gender: "女", todayLaps: 0, totalLaps: 0 },
+            { id: 3, name: "邱苡姮", gender: "女", todayLaps: 0, totalLaps: 0 },
+            { id: 4, name: "洪喬恩", gender: "女", todayLaps: 0, totalLaps: 0 },
+            { id: 5, name: "張家恩", gender: "女", todayLaps: 0, totalLaps: 0 },
+            { id: 6, name: "張鈺暄", gender: "女", todayLaps: 0, totalLaps: 0 },
+            { id: 7, name: "許云柔", gender: "女", todayLaps: 0, totalLaps: 0 },
+            { id: 8, name: "陳品慈", gender: "女", todayLaps: 0, totalLaps: 0 },
+            { id: 9, name: "陳禹霏", gender: "女", todayLaps: 0, totalLaps: 0 },
+            { id: 10, name: "陳臻", gender: "女", todayLaps: 0, totalLaps: 0 },
+            { id: 11, name: "游昕瞳", gender: "女", todayLaps: 0, totalLaps: 0 },
+            { id: 12, name: "黃禹蓁", gender: "女", todayLaps: 0, todayLaps: 0, totalLaps: 0 },
+            { id: 13, name: "楊婕妤", gender: "女", todayLaps: 0, totalLaps: 0 },
+            { id: 14, name: "謝羽妮", gender: "女", todayLaps: 0, totalLaps: 0 },
+            { id: 15, name: "李禹柔", gender: "女", todayLaps: 0, totalLaps: 0 },
+            { id: 16, name: "王翊丞", gender: "男", todayLaps: 0, totalLaps: 0 },
+            { id: 17, name: "朱天佑", gender: "男", todayLaps: 0, totalLaps: 0 },
+            { id: 18, name: "林長存", gender: "男", todayLaps: 0, totalLaps: 0 },
+            { id: 19, name: "林祐興", gender: "男", todayLaps: 0, totalLaps: 0 },
+            { id: 20, name: "林航辰", gender: "男", todayLaps: 0, totalLaps: 0 },
+            { id: 21, name: "洪翊晉", gender: "男", todayLaps: 0, totalLaps: 0 },
+            { id: 22, name: "范容瑞", gender: "男", todayLaps: 0, totalLaps: 0 },
+            { id: 23, name: "徐國舜", gender: "男", todayLaps: 0, totalLaps: 0 },
+            { id: 24, name: "張宗祐", gender: "男", todayLaps: 0, totalLaps: 0 },
+            { id: 25, name: "張泓傅", gender: "男", todayLaps: 0, totalLaps: 0 },
+            { id: 26, name: "陳東昇", gender: "男", todayLaps: 0, totalLaps: 0 },
+            { id: 27, name: "陳彥宇", gender: "男", todayLaps: 0, totalLaps: 0 },
+            { id: 28, name: "廖佐熙", gender: "男", todayLaps: 0, totalLaps: 0 },
+            { id: 29, name: "鄭楷霖", gender: "男", todayLaps: 0, totalLaps: 0 }
+        ];
+
+        const todayStr = new Date().toLocaleDateString('zh-TW');
+        document.getElementById('currentDateDisplay').innerText = `今天是 ${todayStr}`;
+
+        let lastDate = localStorage.getItem('running_date');
+        let students = JSON.parse(localStorage.getItem('running_data')) || initialStudents;
+
+        if (lastDate !== todayStr) {
+            students.forEach(s => { s.todayLaps = 0; });
+            localStorage.setItem('running_date', todayStr);
+            localStorage.setItem('running_data', JSON.stringify(students));
+        }
+
+        /* 倒數計時邏輯 */
+        let timeLeft = 300; // 5分鐘 (300秒)
+        let timerInterval = null;
+        let isClosed = false;
+
+        function toggleTimer() {
+            const btn = document.getElementById('timerBtn');
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                btn.innerText = "繼續計時";
+            } else {
+                if(timeLeft <= 0) { timeLeft = 300; isClosed = false; }
+                btn.innerText = "暫停";
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    updateTimerDisplay();
+                    if (timeLeft <= 0) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                        isClosed = true;
+                        btn.innerText = "重置計時";
+                        showToast("⏰ 限時結束！已關門！");
+                    }
+                }, 1000);
+            }
+        }
+
+        function updateTimerDisplay() {
+            const m = String(Math.floor(timeLeft / 60)).padStart(2, '0');
+            const s = String(timeLeft % 60).padStart(2, '0');
+            const display = document.getElementById('timerDisplay');
+            display.innerText = `${m}:${s}`;
+            display.style.color = timeLeft <= 60 ? "#dc2626" : "#856404";
+        }
+
+        function switchTab(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            event.target.classList.add('active');
+            if (pageId === 'rank-page') renderRankings();
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('studentGrid');
+            grid.innerHTML = '';
+            students.forEach(s => {
+                const card = document.createElement('div');
+                card.className = 'seat-card';
+                card.onclick = () => addLap(s.id);
+                card.innerHTML = `
+                    <div class="seat-num">${s.id}號</div>
+                    <div class="seat-name">${s.name}</div>
+                    <div class="today-laps">今日 ${s.todayLaps || 0} 圈</div>
+                    <div class="total-laps">累計 ${s.totalLaps || 0} 圈</div>
+                `;
+                grid.appendChild(card);
+            });
+            updateProgressBar();
+        }
+
+        function addLap(id) {
+            if (isClosed) {
+                if(!confirm("⚠️ 5分鐘限時已過（已關門），確定要補登記這一圈嗎？")) return;
+            }
+            const student = students.find(s => s.id === id);
+            if (student) {
+                student.todayLaps = (student.todayLaps || 0) + 1;
+                student.totalLaps = (student.totalLaps || 0) + 1;
+                saveData();
+                renderGrid();
+                showToast(`${student.id}號 ${student.name} +1 圈！`);
+            }
+        }
+
+        function updateProgressBar() {
+            const totalClassLaps = students.reduce((sum, s) => sum + (s.totalLaps || 0), 0);
+            const percent = Math.min(100, Math.round((totalClassLaps / TARGET_LAPS) * 100));
+            
+            document.getElementById('progressBar').style.width = `${percent}%`;
+            document.getElementById('progressPercent').innerText = `${percent}%`;
+            
+            const remaining = Math.max(0, TARGET_LAPS - totalClassLaps);
+            if (remaining === 0) {
+                document.getElementById('progressText').innerText = `🎉 恭喜！全班已達成 ${TARGET_LAPS} 圈解鎖目標！`;
+            } else {
+                document.getElementById('progressText').innerText = `全班累積 ${totalClassLaps} / ${TARGET_LAPS} 圈 (還差 ${remaining} 圈)`;
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('running_data', JSON.stringify(students));
+            localStorage.setItem('running_date', todayStr);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 1200);
+        }
+
+        function renderRankings() {
+            const maleList = students.filter(s => s.gender === '男').sort((a,b) => (b.todayLaps||0) - (a.todayLaps||0)).slice(0, 5);
+            const femaleList = students.filter(s => s.gender === '女').sort((a,b) => (b.todayLaps||0) - (a.todayLaps||0)).slice(0, 5);
+
+            document.getElementById('maleRankList').innerHTML = maleList.map((s, index) => `
+                <div class="rank-item">
+                    <span><span class="rank-badge top-${index+1}">${index+1}</span> ${s.id}號 ${s.name}</span>
+                    <span style="font-weight:bold; color:#2563eb;">今日 ${s.todayLaps||0} 圈 <span style="font-size:11px; color:#9ca3af; font-weight:normal;">(總 ${s.totalLaps||0})</span></span>
+                </div>
+            `).join('');
+
+            document.getElementById('femaleRankList').innerHTML = femaleList.map((s, index) => `
+                <div class="rank-item">
+                    <span><span class="rank-badge top-${index+1}">${index+1}</span> ${s.id}號 ${s.name}</span>
+                    <span style="font-weight:bold; color:#db2777;">今日 ${s.todayLaps||0} 圈 <span style="font-size:11px; color:#9ca3af; font-weight:normal;">(總 ${s.totalLaps||0})</span></span>
+                </div>
+            `).join('');
+        }
+
+        renderGrid();
+    </script>
+</body>
+</html>
