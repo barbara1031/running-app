@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>班級健促跑步追蹤器 (雲端同步版)</title>
     
-    <!-- 引入 Firebase SDK (Compat 版本) -->
+    <!-- 引入 Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
@@ -15,15 +15,21 @@
         
         .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
         h1 { color: #1a56db; font-size: 20px; margin: 0; }
-        .settings-toggle { background: #e5e7eb; border: none; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; color: #374151; }
+        
+        /* 頂部按鈕區 */
+        .header-btns { display: flex; gap: 8px; }
+        .settings-toggle { background: #e5e7eb; border: none; padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; color: #374151; display: none; }
+        .auth-btn { background: #ef4444; border: none; padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; color: white; }
+        .auth-btn.logout { background: #4b5563; }
 
         .date-tag { color: #6b7280; font-size: 12px; margin-bottom: 10px; font-weight: bold; display: flex; align-items: center; gap: 6px; }
         .history-mode-tag { background: #fef3c7; color: #d97706; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
 
-        /* 學生模式提示條 */
-        .student-banner { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; text-align: center; margin-bottom: 10px; display: none; }
+        /* 模式提示條 */
+        .status-banner { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; text-align: center; margin-bottom: 10px; border: 1px solid transparent; }
+        .status-banner.view-only { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+        .status-banner.admin { background: #fef3c7; color: #92400e; border-color: #fde68a; }
 
-        /* 連線狀態提示條 */
         .sync-status { background: #d1fae5; color: #065f46; font-size: 11px; padding: 4px 8px; border-radius: 4px; text-align: center; margin-bottom: 10px; font-weight: bold; }
 
         /* 設定彈窗 */
@@ -58,6 +64,8 @@
         .student-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; }
         .seat-card { position: relative; background: white; border: 2px solid #e5e7eb; border-radius: 10px; padding: 14px 5px 8px 5px; text-align: center; cursor: pointer; transition: all 0.2s; user-select: none; }
         .seat-card:active { transform: scale(0.95); }
+        .seat-card.disabled { cursor: default; }
+        .seat-card.disabled:active { transform: none; }
         
         .seat-card.has-run { background: #e0f2fe; border-color: #2563eb; }
         .seat-card.has-run .seat-name { color: #1d4ed8; font-weight: bold; }
@@ -65,7 +73,6 @@
         .seat-card.on-leave { background: #f3f4f6; border-color: #d1d5db; opacity: 0.7; }
         .seat-card.on-leave .seat-name { color: #9ca3af; text-decoration: line-through; }
 
-        /* 控制按鈕：請假與扣圈 */
         .card-btn { position: absolute; top: 3px; font-size: 10px; padding: 2px 4px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; }
         .sub-btn { left: 3px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
         .leave-btn { right: 3px; }
@@ -94,6 +101,7 @@
         .clickable-link { color: #2563eb; text-decoration: underline; cursor: pointer; font-weight: bold; }
         .clickable-link:hover { color: #1d4ed8; }
 
+        /* 彈窗 */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-card { background: white; width: 90%; max-width: 420px; max-height: 80vh; border-radius: 12px; padding: 18px; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 12px; }
@@ -106,23 +114,27 @@
 <body>
 
     <div class="header-bar">
-        <h1>🏃‍♂️ 班級健促跑步追蹤</h1>
-        <button class="settings-toggle" id="settingsToggleBtn" onclick="toggleSettings()">⚙️ 設定目標</button>
+        <h1>🏃‍♂️ 班級健促追蹤器</h1>
+        <div class="header-btns">
+            <button class="settings-toggle" id="settingsToggleBtn" onclick="toggleSettings()">⚙️ 設定</button>
+            <button class="auth-btn" id="authBtn" onclick="handleAuthClick()">🔒 教師登入</button>
+        </div>
     </div>
+    
     <div class="date-tag">
         <span id="currentDateDisplay"></span>
         <span id="historyModeBadge" class="history-mode-tag" style="display:none;">⚠️ 歷史補登模式</span>
     </div>
     <div class="sync-status" id="syncStatus">☁️ 雲端同步中...</div>
-    <div class="student-banner" id="studentBanner">👀 目前為「學生瀏覽模式」（純觀看，無法登記圈數）</div>
+    <div id="statusBanner" class="status-banner view-only">👀 載入中...</div>
 
-    <!-- 自訂參數面板 -->
+    <!-- 自訂參數面板 (僅管理員可見) -->
     <div class="settings-card" id="settingsCard">
         <div class="settings-group">
             <div style="font-weight:bold; color:#1a56db; margin-bottom:4px;">⚙️ 自訂參數設定 (設定會永久保留)</div>
             
             <div class="settings-row">
-                <label>📅 切換紀錄日期 (可歷史補登):</label>
+                <label>📅 切換紀錄日期 (可補登):</label>
                 <div>
                     <input type="date" id="cfgDate" class="settings-input" style="width: 120px;" onchange="handleDateSelectChange(this.value)">
                     <button onclick="resetToTodayDate()" style="font-size:11px; padding:3px 6px;">回到今天</button>
@@ -143,7 +155,7 @@
             </div>
 
             <div class="settings-row">
-                <label>🎁 解鎖獎品/特權名稱:</label>
+                <label>🎁 解鎖特權名稱:</label>
                 <input type="text" id="cfgReward" class="settings-input" style="width: 140px;" value="換座位 / 播電影">
             </div>
 
@@ -165,13 +177,13 @@
 
     <!-- 分頁選單 -->
     <div class="tabs">
-        <button class="tab-btn active" id="inputTabBtn" onclick="switchTab('input-page')">⚡ 快速記圈</button>
-        <button class="tab-btn" id="rankTabBtn" onclick="switchTab('rank-page')">🏆 今日 Top 5</button>
+        <button class="tab-btn" id="inputTabBtn" onclick="switchTab('input-page')" style="display:none;">⚡ 快速記圈</button>
+        <button class="tab-btn active" id="rankTabBtn" onclick="switchTab('rank-page')">🏆 今日 Top 5</button>
         <button class="tab-btn" id="backendTabBtn" onclick="switchTab('backend-page')">📊 後端數據</button>
     </div>
 
-    <!-- 頁面 1：記圈 + 限時關門 -->
-    <div id="input-page" class="page active">
+    <!-- 頁面 1：記圈 + 限時關門 (僅管理員可見) -->
+    <div id="input-page" class="page">
         <div class="timer-box" id="timerBox">
             <div>
                 <span style="font-size: 12px; display: block;" id="timerLabel">⏱️ 限時關門倒數</span>
@@ -181,13 +193,13 @@
         </div>
 
         <div style="margin-bottom: 10px; color: #6b7280; font-size: 12px; text-align: center;">
-            點擊卡片 +1 圈｜點擊 [-1] 扣圈｜時間到後仍可登記(不計入目標500圈)
+            點擊卡片 +1 圈｜點擊 [-1] 扣圈｜時間到後仍可登記(不計入目標)
         </div>
         <div class="student-grid" id="studentGrid"></div>
     </div>
 
-    <!-- 頁面 2：今日男女 Top 5 (依抵達時間排序) -->
-    <div id="rank-page" class="page">
+    <!-- 頁面 2：今日男女 Top 5 -->
+    <div id="rank-page" class="page active">
         <div class="rank-card">
             <div class="rank-title" style="color: #2563eb;">
                 <span>👦 男生今日 Top 5</span>
@@ -222,13 +234,13 @@
             </div>
 
             <div style="margin-top: 10px; display: flex; gap: 8px;">
-                <button onclick="exportCSV()" style="flex:1; background:#059669; color:white; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;">📥 匯出當日 CSV 表格</button>
+                <button onclick="exportCSV()" style="flex:1; background:#059669; color:white; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;">📥 匯出 CSV 表格</button>
             </div>
         </div>
 
         <div class="rank-card">
             <div class="rank-title" style="color:#1e3a8a;">📊 當日全班紀錄與累計 Top 5 統計</div>
-            <div style="font-size:11px; color:#6b7280; margin-bottom:6px;">💡 提示：點擊「Top5次數」或「累計圈數」藍字可查看歷史日期明細</div>
+            <div style="font-size:11px; color:#6b7280; margin-bottom:6px;">💡 提示：點擊「Top5次數」或「累計圈數」藍字可查看明細</div>
             <div style="overflow-x: auto;">
                 <table>
                     <thead>
@@ -262,9 +274,14 @@
         </div>
     </div>
 
-    <div id="toast" class="toast">已成功 +1 圈！</div>
+    <div id="toast" class="toast">已成功！</div>
 
     <script>
+        // ==========================================
+        // 🔒 系統管理密碼設定 (可在此修改)
+        // ==========================================
+        const ADMIN_PASSWORD = "1031";
+
         const firebaseConfig = {
             apiKey: "AIzaSyAbQ1UxwWWOYP64pMGAcQJlikdadOFJmj0",
             authDomain: "running-app-ce6e2.firebaseapp.com",
@@ -277,8 +294,8 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const isStudentMode = urlParams.get('view') === 'student' || urlParams.get('mode') === 'student';
+        // 💡 登入權限狀態檢查
+        let isAdmin = localStorage.getItem('running_admin_logged_in') === 'true';
 
         const initialStudents = [
             { id: 1, name: "李心彤", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, isLeave: false },
@@ -292,7 +309,7 @@
             { id: 9, name: "陳禹霏", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, isLeave: false },
             { id: 10, name: "陳臻", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, isLeave: false },
             { id: 11, name: "游昕瞳", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, isLeave: false },
-            { id: 12, name: "黃禹蓁", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, todayFirstLapTime: null, isLeave: false },
+            { id: 12, name: "黃禹蓁", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, isLeave: false },
             { id: 13, name: "楊婕妤", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, isLeave: false },
             { id: 14, name: "謝羽妮", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, isLeave: false },
             { id: 15, name: "李禹柔", gender: "女", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, isLeave: false },
@@ -320,20 +337,68 @@
             return `${year}-${month}-${day}`;
         };
 
-        // 💡 1. 每日開啟自動重置為當天 system date
         let systemTodayStr = getSystemTodayDateStr();
         let currentWorkingDate = systemTodayStr;
-
-        // 💡 2. 設定參數永久保留預設值
-        let config = JSON.parse(localStorage.getItem('running_config_persistent')) || {
-            timerMin: 5,
-            timerSec: 0,
-            targetLaps: 500,
-            rewardText: "換座位 / 播電影"
-        };
-
+        let config = JSON.parse(localStorage.getItem('running_config_persistent')) || { timerMin: 5, timerSec: 0, targetLaps: 500, rewardText: "換座位 / 播電影" };
         let historyLogs = {};
         let students = JSON.parse(JSON.stringify(initialStudents));
+
+        // 💡 權限 UI 切換邏輯
+        function updateAuthUI() {
+            const authBtn = document.getElementById('authBtn');
+            const inputTabBtn = document.getElementById('inputTabBtn');
+            const settingsBtn = document.getElementById('settingsToggleBtn');
+            const statusBanner = document.getElementById('statusBanner');
+            
+            if (isAdmin) {
+                authBtn.innerText = "🔓 登出";
+                authBtn.classList.add("logout");
+                inputTabBtn.style.display = "block";
+                settingsBtn.style.display = "inline-block";
+                
+                statusBanner.innerText = "✅ 目前為「教師管理模式」（可登記圈數與設定）";
+                statusBanner.className = "status-banner admin";
+            } else {
+                authBtn.innerText = "🔒 教師登入";
+                authBtn.classList.remove("logout");
+                inputTabBtn.style.display = "none";
+                settingsBtn.style.display = "none";
+                document.getElementById('settingsCard').classList.remove('active');
+                
+                statusBanner.innerText = "👀 目前為「唯讀觀看模式」（僅供瀏覽排名與數據）";
+                statusBanner.className = "status-banner view-only";
+
+                // 若在觀看模式卻停留在記圈頁，強制切換至排名
+                if (document.getElementById('input-page').classList.contains('active')) {
+                    switchTab('rank-page');
+                }
+            }
+            renderGrid(); // 重新渲染卡片綁定點擊事件
+        }
+
+        function handleAuthClick() {
+            if (isAdmin) {
+                // 執行登出
+                localStorage.removeItem('running_admin_logged_in');
+                isAdmin = false;
+                updateAuthUI();
+                showToast("🔓 已安全登出！返回觀看模式。");
+            } else {
+                // 執行登入
+                const pwd = prompt("請輸入教師管理密碼：");
+                if (pwd === null) return; // 按下取消
+                
+                if (pwd === ADMIN_PASSWORD) {
+                    localStorage.setItem('running_admin_logged_in', 'true');
+                    isAdmin = true;
+                    updateAuthUI();
+                    showToast("✅ 登入成功！已解鎖管理權限。");
+                    switchTab('input-page'); // 登入成功直接跳到記圈頁
+                } else {
+                    alert("❌ 密碼錯誤！無法解鎖。");
+                }
+            }
+        }
 
         function updateDateUI() {
             const isToday = (currentWorkingDate === systemTodayStr);
@@ -357,11 +422,8 @@
             renderGrid();
         }
 
-        // 💡 動態載入當前 workingDate 的學生數據，並實時計算「全學期累計總圈數」
         function loadDataForCurrentDate() {
             const dayLogs = historyLogs[currentWorkingDate] || [];
-            
-            // 重新計算學期總累積圈數
             const lifetimeTotals = {};
             const lifetimeLateTotals = {};
             initialStudents.forEach(s => { lifetimeTotals[s.id] = 0; lifetimeLateTotals[s.id] = 0; });
@@ -387,26 +449,21 @@
             });
         }
 
-        /* 💡 雲端資料庫（Firestore）即時同步監聽 */
         db.collection("running_tracker").doc("main_store")
           .onSnapshot((doc) => {
               if (doc.exists) {
                   const cloudData = doc.data();
                   
-                  // 1. 載入並永久保留設定
                   if (cloudData.config) {
                       config = cloudData.config;
                       localStorage.setItem('running_config_persistent', JSON.stringify(config));
                   }
-
-                  // 2. 載入歷史紀錄
                   if (cloudData.historyLogs) {
                       historyLogs = cloudData.historyLogs;
                   }
 
                   loadDataForCurrentDate();
 
-                  // 更新 UI 介面
                   document.getElementById('cfgTimerMin').value = config.timerMin;
                   document.getElementById('cfgTimerSec').value = config.timerSec;
                   document.getElementById('cfgTarget').value = config.targetLaps;
@@ -424,7 +481,7 @@
                   document.getElementById('syncStatus').style.background = "#d1fae5";
                   document.getElementById('syncStatus').style.color = "#065f46";
               } else {
-                  saveData();
+                  if (isAdmin) saveData();
               }
           }, (error) => {
               console.error("Cloud sync error:", error);
@@ -438,12 +495,17 @@
         let isTimeUp = false;
 
         function toggleSettings() {
-            if (isStudentMode) return;
+            if (!isAdmin) return;
             document.getElementById('settingsCard').classList.toggle('active');
         }
 
-        // 💡 儲存設定：永久同步 config 與特定日期的改動
         function saveSettings() {
+            if (!isAdmin) return;
+            const selectedDate = document.getElementById('cfgDate').value;
+            if (selectedDate && selectedDate !== currentWorkingDate) {
+                switchWorkingDate(selectedDate);
+            }
+
             config.timerMin = parseInt(document.getElementById('cfgTimerMin').value) || 0;
             config.timerSec = parseInt(document.getElementById('cfgTimerSec').value) || 0;
             config.targetLaps = parseInt(document.getElementById('cfgTarget').value) || 500;
@@ -459,7 +521,7 @@
         }
 
         function toggleTimer() {
-            if (isStudentMode) return;
+            if (!isAdmin) return;
             const btn = document.getElementById('timerBtn');
             if (timerInterval) {
                 clearInterval(timerInterval);
@@ -505,6 +567,9 @@
         }
 
         function switchTab(pageId) {
+            // 如果是非管理員，且想切到 input-page，則強制阻擋
+            if (!isAdmin && pageId === 'input-page') return;
+
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             
@@ -533,14 +598,14 @@
             students.forEach(s => {
                 const isLeave = s.isLeave || false;
                 const card = document.createElement('div');
-                card.className = `seat-card ${s.todayLaps > 0 ? 'has-run' : ''} ${isLeave ? 'on-leave' : ''}`;
+                card.className = `seat-card ${s.todayLaps > 0 ? 'has-run' : ''} ${isLeave ? 'on-leave' : ''} ${!isAdmin ? 'disabled' : ''}`;
                 
-                if (!isStudentMode) {
+                if (isAdmin) {
                     card.onclick = () => addLap(s.id);
                 }
                 
                 const lateText = (s.todayLateLaps || 0) > 0 ? `<span class="late-laps-tag">(超時${s.todayLateLaps})</span>` : '';
-                const btnControls = isStudentMode ? '' : `
+                const btnControls = !isAdmin ? '' : `
                     <button class="card-btn sub-btn" onclick="subtractLap(event, ${s.id})">-1</button>
                     <button class="card-btn leave-btn ${isLeave ? 'is-on' : 'is-off'}" onclick="toggleLeave(event, ${s.id})">
                         ${isLeave ? '取消假' : '請假'}
@@ -560,7 +625,7 @@
         }
 
         function subtractLap(event, id) {
-            if (isStudentMode) return;
+            if (!isAdmin) return;
             event.stopPropagation();
             const student = students.find(s => s.id === id);
             if (!student || (student.todayLaps || 0) <= 0) {
@@ -582,7 +647,7 @@
         }
 
         function toggleLeave(event, id) {
-            if (isStudentMode) return;
+            if (!isAdmin) return;
             event.stopPropagation();
             const student = students.find(s => s.id === id);
             if (student) {
@@ -593,7 +658,7 @@
         }
 
         function addLap(id) {
-            if (isStudentMode) return;
+            if (!isAdmin) return;
             const student = students.find(s => s.id === id);
             if (!student) return;
 
@@ -617,7 +682,6 @@
             saveData();
         }
 
-        /* 💡 全班解鎖進度計算：累計所有歷史日期的有效圈數 */
         function updateProgressBar() {
             let validClassLaps = 0;
             Object.keys(historyLogs).forEach(d => {
@@ -641,12 +705,11 @@
             }
         }
 
-        /* 💡 雲端儲存：只更新當前 workingDate 的 Log 和 Persistent Config */
         function saveData() {
-            if (isStudentMode) return;
+            if (!isAdmin) return;
             
             historyLogs[currentWorkingDate] = JSON.parse(JSON.stringify(students));
-            loadDataForCurrentDate(); // 重新觸發累計計算
+            loadDataForCurrentDate(); 
 
             db.collection("running_tracker").doc("main_store").set({
                 config: config,
@@ -751,8 +814,10 @@
                 });
             } else if (sortVal === 'validTotal') {
                 sortedData.sort((a,b) => {
-                    const vA = Math.max(0, (a.totalLaps || 0) - (a.totalLateLaps || 0));
-                    const vB = Math.max(0, (b.totalLaps || 0) - (b.totalLateLaps || 0));
+                    const studentRefA = students.find(st => st.id === a.id) || a;
+                    const studentRefB = students.find(st => st.id === b.id) || b;
+                    const vA = Math.max(0, (studentRefA.totalLaps || 0) - (studentRefA.totalLateLaps || 0));
+                    const vB = Math.max(0, (studentRefB.totalLaps || 0) - (studentRefB.totalLateLaps || 0));
                     if (vB !== vA) return vB - vA;
                     return a.id - b.id;
                 });
@@ -761,8 +826,6 @@
             const tbody = document.getElementById('historyTableBody');
             tbody.innerHTML = sortedData.map((s, idx) => {
                 const validTodayLaps = Math.max(0, (s.todayLaps || 0) - (s.todayLateLaps || 0));
-                
-                // 動態找回全學期該同學的累計數值
                 const studentRef = students.find(st => st.id === s.id) || s;
                 const validTotalLaps = Math.max(0, (studentRef.totalLaps || 0) - (studentRef.totalLateLaps || 0));
                 const topCount = top5Counts[s.id] || 0;
@@ -938,19 +1001,11 @@
             link.click();
         }
 
-        // 💡 學生模式初始化處理
-        if (isStudentMode) {
-            document.getElementById('studentBanner').style.display = 'block';
-            document.getElementById('settingsToggleBtn').style.display = 'none';
-            document.getElementById('inputTabBtn').style.display = 'none';
-            switchTab('rank-page');
-        } else {
-            updateDateUI();
-            updateTimerDisplay();
-        }
+        // 初始化載入 UI
+        updateAuthUI();
+        updateDateUI();
+        updateTimerDisplay();
 
-        renderGrid();
     </script>
 </body>
 </html>
-
