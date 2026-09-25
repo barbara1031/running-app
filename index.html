@@ -6,7 +6,7 @@
     <title>班級健促跑步追蹤器 (雲端同步版)</title>
     
     <!-- 1. 網頁分頁標籤上的小圖示 (Favicon) -->
-    <link rel="icon" href="icon.png">
+    <link rel="icon" href="https://你的圖片網址.png">
 
     <!-- 2. 給 Google Classroom、LINE 看的連結預覽設定 (OG 標籤) -->
     <meta property="og:title" content="🏃‍♂️ 班級健促跑步追蹤器">
@@ -208,8 +208,7 @@
 
     <!-- 頁面 2：今日與累計男女 Top 5 -->
     <div id="rank-page" class="page active">
-        <!-- ⚡ 當日 / 最近一次跑步英雄榜 -->
-        <div style="font-weight:bold; color:#1e3a8a; margin-bottom:8px; font-size:14px; display:flex; align-items:center; gap:4px;">
+        <div style="font-weight:bold; color:#1e3a8a; margin-bottom:8px; font-size:14px;">
             <span>⚡ 當日 / 最近一次跑步英雄榜</span>
         </div>
         <div class="rank-card">
@@ -229,7 +228,6 @@
 
         <hr style="border:0; border-top:1px dashed #cbd5e1; margin:16px 0 12px 0;">
 
-        <!-- 🏆 全學期累計英雄榜 -->
         <div style="font-weight:bold; color:#1e3a8a; margin-bottom:8px; font-size:14px;">
             <span>🏆 全學期累計有效圈數 Top 5</span>
         </div>
@@ -356,12 +354,12 @@
             { id: 29, name: "鄭楷霖", gender: "男", todayLaps: 0, todayLateLaps: 0, todayFirstLapTime: null, isLeave: false }
         ];
 
-        const getSystemTodayDateStr = () => {
+        const getSystemTodayDateStr = function() {
             const now = new Date();
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
+            return year + '-' + month + '-' + day;
         };
 
         let systemTodayStr = getSystemTodayDateStr();
@@ -425,7 +423,7 @@
 
         function updateDateUI() {
             const isToday = (currentWorkingDate === systemTodayStr);
-            document.getElementById('currentDateDisplay').innerText = `📅 當前紀錄日期：${currentWorkingDate} ${isToday ? '(今天)' : ''}`;
+            document.getElementById('currentDateDisplay').innerText = "📅 當前紀錄日期：" + currentWorkingDate + (isToday ? " (今天)" : "");
             document.getElementById('historyModeBadge').style.display = isToday ? 'none' : 'inline-block';
             document.getElementById('cfgDate').value = currentWorkingDate;
         }
@@ -449,19 +447,21 @@
             const dayLogs = historyLogs[currentWorkingDate] || [];
             const lifetimeTotals = {};
             const lifetimeLateTotals = {};
-            initialStudents.forEach(s => { lifetimeTotals[s.id] = 0; lifetimeLateTotals[s.id] = 0; });
+            initialStudents.forEach(function(s) { lifetimeTotals[s.id] = 0; lifetimeLateTotals[s.id] = 0; });
 
-            Object.keys(historyLogs).forEach(d => {
-                (historyLogs[d] || []).forEach(s => {
+            Object.keys(historyLogs).forEach(function(d) {
+                (historyLogs[d] || []).forEach(function(s) {
                     lifetimeTotals[s.id] = (lifetimeTotals[s.id] || 0) + (s.todayLaps || 0);
                     lifetimeLateTotals[s.id] = (lifetimeLateTotals[s.id] || 0) + (s.todayLateLaps || 0);
                 });
             });
 
-            students = initialStudents.map(initS => {
-                const existing = dayLogs.find(s => s.id === initS.id);
+            students = initialStudents.map(function(initS) {
+                const existing = dayLogs.find(function(s) { return s.id === initS.id; });
                 return {
-                    ...initS,
+                    id: initS.id,
+                    name: initS.name,
+                    gender: initS.gender,
                     todayLaps: existing ? (existing.todayLaps || 0) : 0,
                     todayLateLaps: existing ? (existing.todayLateLaps || 0) : 0,
                     todayFirstLapTime: existing ? (existing.todayFirstLapTime || null) : null,
@@ -473,7 +473,7 @@
         }
 
         db.collection("running_tracker").doc("main_store")
-          .onSnapshot((doc) => {
+          .onSnapshot(function(doc) {
               if (doc.exists) {
                   const cloudData = doc.data();
                   
@@ -506,7 +506,7 @@
               } else {
                   if (isAdmin) saveData();
               }
-          }, (error) => {
+          }, function(error) {
               console.error("Cloud sync error:", error);
               document.getElementById('syncStatus').innerText = "⚠️ 雲端連線失敗，請檢查網路";
               document.getElementById('syncStatus').style.background = "#fee2e2";
@@ -526,7 +526,7 @@
             if (!isAdmin) return;
             const selectedDate = document.getElementById('cfgDate').value;
             if (selectedDate && selectedDate !== currentWorkingDate) {
-                switchWorkingDate(selectedDate);
+                handleDateSelectChange(selectedDate);
             }
 
             config.timerMin = parseInt(document.getElementById('cfgTimerMin').value) || 0;
@@ -553,7 +553,7 @@
             } else {
                 if(timeLeft <= 0) { resetTimerState(); }
                 btn.innerText = "暫停";
-                timerInterval = setInterval(() => {
+                timerInterval = setInterval(function() {
                     timeLeft--;
                     updateTimerDisplay();
                     if (timeLeft <= 0) {
@@ -586,19 +586,22 @@
         function updateTimerDisplay() {
             const m = String(Math.floor(Math.max(0, timeLeft) / 60)).padStart(2, '0');
             const s = String(Math.max(0, timeLeft) % 60).padStart(2, '0');
-            document.getElementById('timerDisplay').innerText = `${m}:${s}`;
+            document.getElementById('timerDisplay').innerText = m + ":" + s;
         }
 
         function switchTab(pageId) {
             if (!isAdmin && pageId === 'input-page') return;
 
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+            document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
             
             const targetPage = document.getElementById(pageId);
             if (targetPage) targetPage.classList.add('active');
 
-            const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick')?.includes(pageId));
+            const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(function(b) {
+                const attr = b.getAttribute('onclick');
+                return attr && attr.indexOf(pageId) !== -1;
+            });
             if (activeBtn) activeBtn.classList.add('active');
             
             if (pageId === 'rank-page') renderRankings();
@@ -611,36 +614,33 @@
             const h = String(d.getHours()).padStart(2, '0');
             const m = String(d.getMinutes()).padStart(2, '0');
             const s = String(d.getSeconds()).padStart(2, '0');
-            return `${h}:${m}:${s}`;
+            return h + ":" + m + ":" + s;
         }
 
         function renderGrid() {
             const grid = document.getElementById('studentGrid');
             grid.innerHTML = '';
-            students.forEach(s => {
+            students.forEach(function(s) {
                 const isLeave = s.isLeave || false;
                 const card = document.createElement('div');
-                card.className = `seat-card ${s.todayLaps > 0 ? 'has-run' : ''} ${isLeave ? 'on-leave' : ''} ${!isAdmin ? 'disabled' : ''}`;
+                card.className = "seat-card " + (s.todayLaps > 0 ? 'has-run ' : '') + (isLeave ? 'on-leave ' : '') + (!isAdmin ? 'disabled' : '');
                 
                 if (isAdmin) {
-                    card.onclick = () => addLap(s.id);
+                    card.onclick = function() { addLap(s.id); };
                 }
                 
-                const lateText = (s.todayLateLaps || 0) > 0 ? `<span class="late-laps-tag">(超時${s.todayLateLaps})</span>` : '';
-                const btnControls = !isAdmin ? '' : `
-                    <button class="card-btn sub-btn" onclick="subtractLap(event, ${s.id})">-1</button>
-                    <button class="card-btn leave-btn ${isLeave ? 'is-on' : 'is-off'}" onclick="toggleLeave(event, ${s.id})">
-                        ${isLeave ? '取消假' : '請假'}
-                    </button>
-                `;
+                const lateText = (s.todayLateLaps || 0) > 0 ? '<span class="late-laps-tag">(超時' + s.todayLateLaps + ')</span>' : '';
+                const btnControls = !isAdmin ? '' : 
+                    '<button class="card-btn sub-btn" onclick="subtractLap(event, ' + s.id + ')">-1</button>' +
+                    '<button class="card-btn leave-btn ' + (isLeave ? 'is-on' : 'is-off') + '" onclick="toggleLeave(event, ' + s.id + ')">' +
+                        (isLeave ? '取消假' : '請假') +
+                    '</button>';
 
-                card.innerHTML = `
-                    ${btnControls}
-                    <div class="seat-num">${s.id}號</div>
-                    <div class="seat-name">${s.name}</div>
-                    <div class="today-laps">${isLeave ? '【當日請假】' : `當日 ${s.todayLaps \vert{}\vert{} 0} 圈 ${lateText}`}</div>
-                    <div class="total-laps">累計 ${s.totalLaps || 0} 圈</div>
-                `;
+                card.innerHTML = btnControls +
+                    '<div class="seat-num">' + s.id + '號</div>' +
+                    '<div class="seat-name">' + s.name + '</div>' +
+                    '<div class="today-laps">' + (isLeave ? '【當日請假】' : ('當日 ' + (s.todayLaps || 0) + ' 圈 ' + lateText)) + '</div>' +
+                    '<div class="total-laps">累計 ' + (s.totalLaps || 0) + ' 圈</div>';
                 grid.appendChild(card);
             });
             updateProgressBar();
@@ -649,7 +649,7 @@
         function subtractLap(event, id) {
             if (!isAdmin) return;
             event.stopPropagation();
-            const student = students.find(s => s.id === id);
+            const student = students.find(function(s) { return s.id === id; });
             if (!student || (student.todayLaps || 0) <= 0) {
                 showToast("⚠️ 圈數已為 0，無法再扣除！");
                 return;
@@ -665,27 +665,27 @@
             }
 
             saveData();
-            showToast(`已幫 ${student.id}號 ${student.name} 扣除 1 圈！`);
+            showToast("已幫 " + student.id + "號 " + student.name + " 扣除 1 圈！");
         }
 
         function toggleLeave(event, id) {
             if (!isAdmin) return;
             event.stopPropagation();
-            const student = students.find(s => s.id === id);
+            const student = students.find(function(s) { return s.id === id; });
             if (student) {
                 student.isLeave = !student.isLeave;
                 saveData();
-                showToast(`${student.id}號 ${student.name} ${student.isLeave ? '已標記請假' : '已取消請假'}`);
+                showToast(student.id + "號 " + student.name + " " + (student.isLeave ? '已標記請假' : '已取消請假'));
             }
         }
 
         function addLap(id) {
             if (!isAdmin) return;
-            const student = students.find(s => s.id === id);
+            const student = students.find(function(s) { return s.id === id; });
             if (!student) return;
 
             if (student.isLeave) {
-                if(!confirm(`⚠️ ${student.id}號 ${student.name} 當日已被標記為「請假」，確定要幫他/她登記圈數嗎？`)) return;
+                if(!confirm("⚠️ " + student.id + "號 " + student.name + " 當日已被標記為「請假」，確定要幫他/她登記圈數嗎？")) return;
             }
 
             if (!student.todayFirstLapTime) {
@@ -696,9 +696,9 @@
 
             if (isTimeUp || timeLeft <= 0) {
                 student.todayLateLaps = (student.todayLateLaps || 0) + 1;
-                showToast(`🚨 ${student.id}號 ${student.name} +1 圈 (超時，不計入全班500圈目標)`);
+                showToast("🚨 " + student.id + "號 " + student.name + " +1 圈 (超時，不計入全班500圈目標)");
             } else {
-                showToast(`⚡ ${student.id}號 ${student.name} +1 圈！`);
+                showToast("⚡ " + student.id + "號 " + student.name + " +1 圈！");
             }
 
             saveData();
@@ -706,8 +706,8 @@
 
         function updateProgressBar() {
             let validClassLaps = 0;
-            Object.keys(historyLogs).forEach(d => {
-                (historyLogs[d] || []).forEach(s => {
+            Object.keys(historyLogs).forEach(function(d) {
+                (historyLogs[d] || []).forEach(function(s) {
                     const valid = (s.todayLaps || 0) - (s.todayLateLaps || 0);
                     validClassLaps += Math.max(0, valid);
                 });
@@ -716,14 +716,14 @@
             const target = config.targetLaps || 500;
             const percent = Math.min(100, Math.round((validClassLaps / target) * 100));
             
-            document.getElementById('progressBar').style.width = `${percent}%`;
-            document.getElementById('progressPercent').innerText = `${percent}%`;
+            document.getElementById('progressBar').style.width = percent + "%";
+            document.getElementById('progressPercent').innerText = percent + "%";
             
             const remaining = Math.max(0, target - validClassLaps);
             if (remaining === 0) {
-                document.getElementById('progressText').innerText = `🎉 恭喜！全班已達成 ${target} 圈有效目標！解鎖：${config.rewardText}`;
+                document.getElementById('progressText').innerText = "🎉 恭喜！全班已達成 " + target + " 圈有效目標！解鎖：" + config.rewardText;
             } else {
-                document.getElementById('progressText').innerText = `全班有效累積 ${validClassLaps} / ${target} 圈 (還差 ${remaining} 圈)`;
+                document.getElementById('progressText').innerText = "全班有效累積 " + validClassLaps + " / " + target + " 圈 (還差 " + remaining + " 圈)";
             }
         }
 
@@ -737,9 +737,9 @@
                 config: config,
                 historyLogs: historyLogs,
                 lastUpdated: Date.now()
-            }).then(() => {
+            }).then(function() {
                 console.log("Cloud save successful!");
-            }).catch(err => {
+            }).catch(function(err) {
                 console.error("Cloud save failed:", err);
             });
         }
@@ -748,22 +748,19 @@
             const toast = document.getElementById('toast');
             toast.innerText = msg;
             toast.style.display = 'block';
-            setTimeout(() => { toast.style.display = 'none'; }, 1200);
+            setTimeout(function() { toast.style.display = 'none'; }, 1200);
         }
 
-        /* 💡 渲染「當日/最近 Top 5」與「全學期累計 Top 5」 */
         function renderRankings() {
-            // --- 1. 當日 / 最近一次 Top 5 邏輯 ---
             let displayDate = currentWorkingDate;
             let activeStudents = students;
 
-            const hasRunToday = students.some(s => (s.todayLaps || 0) > 0);
+            const hasRunToday = students.some(function(s) { return (s.todayLaps || 0) > 0; });
 
-            // 若當天完全無紀錄，搜尋歷史中最接近且有紀錄的那一天
             if (!hasRunToday) {
-                const sortedDates = Object.keys(historyLogs).filter(d => {
+                const sortedDates = Object.keys(historyLogs).filter(function(d) {
                     const logs = historyLogs[d] || [];
-                    return logs.some(s => (s.todayLaps || 0) > 0);
+                    return logs.some(function(s) { return (s.todayLaps || 0) > 0; });
                 }).sort().reverse();
 
                 if (sortedDates.length > 0) {
@@ -773,91 +770,92 @@
             }
 
             const dateTagText = (displayDate === currentWorkingDate && hasRunToday) 
-                ? `(${displayDate} 今日)` 
-                : `(${displayDate} 最近紀錄)`;
+                ? "(" + displayDate + " 今日)" 
+                : "(" + displayDate + " 最近紀錄)";
 
             document.getElementById('maleRankDate').innerText = dateTagText;
             document.getElementById('femaleRankDate').innerText = dateTagText;
 
-            const maleList = activeStudents.filter(s => s.gender === '男' && (s.todayLaps || 0) > 0)
-                                     .sort((a,b) => (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity))
+            const maleList = activeStudents.filter(function(s) { return s.gender === '男' && (s.todayLaps || 0) > 0; })
+                                     .sort(function(a,b) { return (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity); })
                                      .slice(0, 5);
 
-            const femaleList = activeStudents.filter(s => s.gender === '女' && (s.todayLaps || 0) > 0)
-                                       .sort((a,b) => (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity))
+            const femaleList = activeStudents.filter(function(s) { return s.gender === '女' && (s.todayLaps || 0) > 0; })
+                                       .sort(function(a,b) { return (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity); })
                                        .slice(0, 5);
 
-            document.getElementById('maleRankList').innerHTML = maleList.length === 0 ? '<div style="color:#9ca3af; font-size:13px; text-align:center;">尚無紀錄</div>' : maleList.map((s, index) => `
-                <div class="rank-item">
-                    <span><span class="rank-badge top-${index+1}">${index+1}</span> ${s.id}號 ${s.name} <span style="font-size:11px; color:#6b7280;">(${formatTime(s.todayFirstLapTime)} 抵達)</span></span>
-                    <span style="font-weight:bold; color:#2563eb;">${s.todayLaps||0} 圈</span>
-                </div>
-            `).join('');
+            document.getElementById('maleRankList').innerHTML = maleList.length === 0 ? '<div style="color:#9ca3af; font-size:13px; text-align:center;">尚無紀錄</div>' : maleList.map(function(s, index) {
+                return '<div class="rank-item">' +
+                    '<span><span class="rank-badge top-' + (index+1) + '">' + (index+1) + '</span> ' + s.id + '號 ' + s.name + ' <span style="font-size:11px; color:#6b7280;">(' + formatTime(s.todayFirstLapTime) + ' 抵達)</span></span>' +
+                    '<span style="font-weight:bold; color:#2563eb;">' + (s.todayLaps||0) + ' 圈</span>' +
+                '</div>';
+            }).join('');
 
-            document.getElementById('femaleRankList').innerHTML = femaleList.length === 0 ? '<div style="color:#9ca3af; font-size:13px; text-align:center;">尚無紀錄</div>' : femaleList.map((s, index) => `
-                <div class="rank-item">
-                    <span><span class="rank-badge top-${index+1}">${index+1}</span> ${s.id}號 ${s.name} <span style="font-size:11px; color:#6b7280;">(${formatTime(s.todayFirstLapTime)} 抵達)</span></span>
-                    <span style="font-weight:bold; color:#db2777;">${s.todayLaps||0} 圈</span>
-                </div>
-            `).join('');
+            document.getElementById('femaleRankList').innerHTML = femaleList.length === 0 ? '<div style="color:#9ca3af; font-size:13px; text-align:center;">尚無紀錄</div>' : femaleList.map(function(s, index) {
+                return '<div class="rank-item">' +
+                    '<span><span class="rank-badge top-' + (index+1) + '">' + (index+1) + '</span> ' + s.id + '號 ' + s.name + ' <span style="font-size:11px; color:#6b7280;">(' + formatTime(s.todayFirstLapTime) + ' 抵達)</span></span>' +
+                    '<span style="font-weight:bold; color:#db2777;">' + (s.todayLaps||0) + ' 圈</span>' +
+                '</div>';
+            }).join('');
 
-            // --- 2. 全學期累計 Top 5 (男女分開) 邏輯 ---
             const top5Counts = calculateTop5Counts();
 
-            const cumulativeData = initialStudents.map(initS => {
+            const cumulativeData = initialStudents.map(function(initS) {
                 let validTotal = 0;
-                Object.keys(historyLogs).forEach(d => {
-                    const rec = (historyLogs[d] || []).find(s => s.id === initS.id);
+                Object.keys(historyLogs).forEach(function(d) {
+                    const rec = (historyLogs[d] || []).find(function(s) { return s.id === initS.id; });
                     if (rec) {
                         const valid = (rec.todayLaps || 0) - (rec.todayLateLaps || 0);
                         validTotal += Math.max(0, valid);
                     }
                 });
                 return {
-                    ...initS,
+                    id: initS.id,
+                    name: initS.name,
+                    gender: initS.gender,
                     validTotalLaps: validTotal,
                     top5Count: top5Counts[initS.id] || 0
                 };
             });
 
-            const maleCumList = cumulativeData.filter(s => s.gender === '男' && s.validTotalLaps > 0)
-                                              .sort((a,b) => b.validTotalLaps - a.validTotalLaps || a.id - b.id)
+            const maleCumList = cumulativeData.filter(function(s) { return s.gender === '男' && s.validTotalLaps > 0; })
+                                              .sort(function(a,b) { return (b.validTotalLaps - a.validTotalLaps) || (a.id - b.id); })
                                               .slice(0, 5);
 
-            const femaleCumList = cumulativeData.filter(s => s.gender === '女' && s.validTotalLaps > 0)
-                                                .sort((a,b) => b.validTotalLaps - a.validTotalLaps || a.id - b.id)
+            const femaleCumList = cumulativeData.filter(function(s) { return s.gender === '女' && s.validTotalLaps > 0; })
+                                                .sort(function(a,b) { return (b.validTotalLaps - a.validTotalLaps) || (a.id - b.id); })
                                                 .slice(0, 5);
 
-            document.getElementById('maleCumRankList').innerHTML = maleCumList.length === 0 ? '<div style="color:#9ca3af; font-size:13px; text-align:center;">尚無累計紀錄</div>' : maleCumList.map((s, index) => `
-                <div class="rank-item">
-                    <span><span class="rank-badge top-${index+1}">${index+1}</span> ${s.id}號 ${s.name} <span style="font-size:11px; color:#d97706;">(登榜 ${s.top5Count} 次)</span></span>
-                    <span style="font-weight:bold; color:#2563eb;">累計 ${s.validTotalLaps} 圈</span>
-                </div>
-            `).join('');
+            document.getElementById('maleCumRankList').innerHTML = maleCumList.length === 0 ? '<div style="color:#9ca3af; font-size:13px; text-align:center;">尚無累計紀錄</div>' : maleCumList.map(function(s, index) {
+                return '<div class="rank-item">' +
+                    '<span><span class="rank-badge top-' + (index+1) + '">' + (index+1) + '</span> ' + s.id + '號 ' + s.name + ' <span style="font-size:11px; color:#d97706;">(登榜 ' + s.top5Count + ' 次)</span></span>' +
+                    '<span style="font-weight:bold; color:#2563eb;">累計 ' + s.validTotalLaps + ' 圈</span>' +
+                '</div>';
+            }).join('');
 
-            document.getElementById('femaleCumRankList').innerHTML = femaleCumList.length === 0 ? '<div style="color:#9ca3af; font-size:13px; text-align:center;">尚無累計紀錄</div>' : femaleCumList.map((s, index) => `
-                <div class="rank-item">
-                    <span><span class="rank-badge top-${index+1}">${index+1}</span> ${s.id}號 ${s.name} <span style="font-size:11px; color:#d97706;">(登榜 ${s.top5Count} 次)</span></span>
-                    <span style="font-weight:bold; color:#db2777;">累計 ${s.validTotalLaps} 圈</span>
-                </div>
-            `).join('');
+            document.getElementById('femaleCumRankList').innerHTML = femaleCumList.length === 0 ? '<div style="color:#9ca3af; font-size:13px; text-align:center;">尚無累計紀錄</div>' : femaleCumList.map(function(s, index) {
+                return '<div class="rank-item">' +
+                    '<span><span class="rank-badge top-' + (index+1) + '">' + (index+1) + '</span> ' + s.id + '號 ' + s.name + ' <span style="font-size:11px; color:#d97706;">(登榜 ' + s.top5Count + ' 次)</span></span>' +
+                    '<span style="font-weight:bold; color:#db2777;">累計 ' + s.validTotalLaps + ' 圈</span>' +
+                '</div>';
+            }).join('');
         }
 
         function calculateTop5Counts() {
             const counts = {};
-            initialStudents.forEach(s => counts[s.id] = 0);
+            initialStudents.forEach(function(s) { counts[s.id] = 0; });
 
-            Object.keys(historyLogs).forEach(date => {
+            Object.keys(historyLogs).forEach(function(date) {
                 const dayData = historyLogs[date] || [];
-                const topBoys = dayData.filter(s => s.gender === '男' && (s.todayLaps || 0) > 0)
-                                       .sort((a,b) => (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity))
+                const topBoys = dayData.filter(function(s) { return s.gender === '男' && (s.todayLaps || 0) > 0; })
+                                       .sort(function(a,b) { return (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity); })
                                        .slice(0, 5);
-                topBoys.forEach(b => { counts[b.id] = (counts[b.id] || 0) + 1; });
+                topBoys.forEach(function(b) { counts[b.id] = (counts[b.id] || 0) + 1; });
 
-                const topGirls = dayData.filter(s => s.gender === '女' && (s.todayLaps || 0) > 0)
-                                         .sort((a,b) => (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity))
+                const topGirls = dayData.filter(function(s) { return s.gender === '女' && (s.todayLaps || 0) > 0; })
+                                         .sort(function(a,b) { return (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity); })
                                          .slice(0, 5);
-                topGirls.forEach(g => { counts[g.id] = (counts[g.id] || 0) + 1; });
+                topGirls.forEach(function(g) { counts[g.id] = (counts[g.id] || 0) + 1; });
             });
 
             return counts;
@@ -871,7 +869,7 @@
             if (!dates.includes(currentWorkingDate)) dates.push(currentWorkingDate);
             dates.sort().reverse();
 
-            dates.forEach(d => {
+            dates.forEach(function(d) {
                 const opt = document.createElement('option');
                 opt.value = d;
                 opt.innerText = d;
@@ -891,18 +889,18 @@
             let sortedData = [...targetData];
 
             if (sortVal === 'seat') {
-                sortedData.sort((a,b) => a.id - b.id);
+                sortedData.sort(function(a,b) { return a.id - b.id; });
             } else if (sortVal === 'top5') {
-                sortedData.sort((a,b) => {
+                sortedData.sort(function(a,b) {
                     const cA = top5Counts[a.id] || 0;
                     const cB = top5Counts[b.id] || 0;
                     if (cB !== cA) return cB - cA;
                     return a.id - b.id;
                 });
             } else if (sortVal === 'validTotal') {
-                sortedData.sort((a,b) => {
-                    const studentRefA = students.find(st => st.id === a.id) || a;
-                    const studentRefB = students.find(st => st.id === b.id) || b;
+                sortedData.sort(function(a,b) {
+                    const studentRefA = students.find(function(st) { return st.id === a.id; }) || a;
+                    const studentRefB = students.find(function(st) { return st.id === b.id; }) || b;
                     const vA = Math.max(0, (studentRefA.totalLaps || 0) - (studentRefA.totalLateLaps || 0));
                     const vB = Math.max(0, (studentRefB.totalLaps || 0) - (studentRefB.totalLateLaps || 0));
                     if (vB !== vA) return vB - vA;
@@ -911,48 +909,46 @@
             }
 
             const tbody = document.getElementById('historyTableBody');
-            tbody.innerHTML = sortedData.map((s, idx) => {
+            tbody.innerHTML = sortedData.map(function(s, idx) {
                 const validTodayLaps = Math.max(0, (s.todayLaps || 0) - (s.todayLateLaps || 0));
-                const studentRef = students.find(st => st.id === s.id) || s;
+                const studentRef = students.find(function(st) { return st.id === s.id; }) || s;
                 const validTotalLaps = Math.max(0, (studentRef.totalLaps || 0) - (studentRef.totalLateLaps || 0));
                 const topCount = top5Counts[s.id] || 0;
 
-                return `
-                    <tr>
-                        <td style="font-weight:bold;">${idx + 1}</td>
-                        <td>${s.id}</td>
-                        <td>${s.name}</td>
-                        <td>${s.gender}</td>
-                        <td style="font-weight:bold; color:#2563eb;">${s.todayLaps || 0}</td>
-                        <td style="color:#059669; font-weight:bold;">${validTodayLaps}</td>
-                        <td style="color:#dc2626;">${s.todayLateLaps || 0}</td>
-                        <td><span class="clickable-link" onclick="showTop5Detail(${s.id})">${topCount} 次</span></td>
-                        <td><span class="clickable-link" onclick="showLapsDetail(${s.id})">${validTotalLaps} 圈</span></td>
-                        <td>${s.isLeave ? '<span style="color:#ef4444;">請假</span>' : (s.todayLaps > 0 ? '<span style="color:#059669;">已完成</span>' : '<span style="color:#9ca3af;">未跑</span>')}</td>
-                    </tr>
-                `;
+                return '<tr>' +
+                    '<td style="font-weight:bold;">' + (idx + 1) + '</td>' +
+                    '<td>' + s.id + '</td>' +
+                    '<td>' + s.name + '</td>' +
+                    '<td>' + s.gender + '</td>' +
+                    '<td style="font-weight:bold; color:#2563eb;">' + (s.todayLaps || 0) + '</td>' +
+                    '<td style="color:#059669; font-weight:bold;">' + validTodayLaps + '</td>' +
+                    '<td style="color:#dc2626;">' + (s.todayLateLaps || 0) + '</td>' +
+                    '<td><span class="clickable-link" onclick="showTop5Detail(' + s.id + ')">' + topCount + ' 次</span></td>' +
+                    '<td><span class="clickable-link" onclick="showLapsDetail(' + s.id + ')">' + validTotalLaps + ' 圈</span></td>' +
+                    '<td>' + (s.isLeave ? '<span style="color:#ef4444;">請假</span>' : ((s.todayLaps > 0) ? '<span style="color:#059669;">已完成</span>' : '<span style="color:#9ca3af;">未跑</span>')) + '</td>' +
+                '</tr>';
             }).join('');
         }
 
         function showTop5Detail(studentId) {
-            const student = initialStudents.find(s => s.id === studentId);
+            const student = initialStudents.find(function(s) { return s.id === studentId; });
             if (!student) return;
 
             let logItems = [];
             const dates = Object.keys(historyLogs).sort();
 
-            dates.forEach(date => {
+            dates.forEach(function(date) {
                 const dayData = historyLogs[date] || [];
-                const topBoys = dayData.filter(s => s.gender === '男' && (s.todayLaps || 0) > 0)
-                                       .sort((a,b) => (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity))
+                const topBoys = dayData.filter(function(s) { return s.gender === '男' && (s.todayLaps || 0) > 0; })
+                                       .sort(function(a,b) { return (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity); })
                                        .slice(0, 5);
 
-                const topGirls = dayData.filter(s => s.gender === '女' && (s.todayLaps || 0) > 0)
-                                         .sort((a,b) => (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity))
+                const topGirls = dayData.filter(function(s) { return s.gender === '女' && (s.todayLaps || 0) > 0; })
+                                         .sort(function(a,b) { return (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity); })
                                          .slice(0, 5);
 
                 const targetList = student.gender === '男' ? topBoys : topGirls;
-                const foundIdx = targetList.findIndex(s => s.id === studentId);
+                const foundIdx = targetList.findIndex(function(s) { return s.id === studentId; });
 
                 if (foundIdx !== -1) {
                     logItems.push({
@@ -964,43 +960,41 @@
                 }
             });
 
-            document.getElementById('modalTitle').innerText = `🏆 ${student.id}號 ${student.name} - Top 5 登榜明細`;
+            document.getElementById('modalTitle').innerText = "🏆 " + student.id + "號 " + student.name + " - Top 5 登榜明細";
             const modalBody = document.getElementById('modalBody');
 
             if (logItems.length === 0) {
                 modalBody.innerHTML = '<div style="color:#9ca3af; text-align:center; padding:15px;">尚無登上 Top 5 的紀錄</div>';
             } else {
-                modalBody.innerHTML = `
-                    <div style="font-size:12px; margin-bottom:8px; color:#4b5563;">全學期共登榜 <b style="color:#d97706;">${logItems.length}</b> 次：</div>
-                    <table style="width:100%; border-collapse:collapse;">
-                        <thead><tr style="background:#f3f4f6;"><th>日期</th><th>當日名次</th><th>抵達時間</th><th>當日圈數</th></tr></thead>
-                        <tbody>
-                            ${logItems.map(item => `
-                                <tr>
-                                    <td><b>${item.date}</b></td>
-                                    <td style="color:#d97706; font-weight:bold;">第 ${item.rank} 名</td>
-                                    <td style="color:#6b7280; font-size:11px;">${item.time}</td>
-                                    <td>${item.laps} 圈</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                `;
+                modalBody.innerHTML = '<div style="font-size:12px; margin-bottom:8px; color:#4b5563;">全學期共登榜 <b style="color:#d97706;">' + logItems.length + '</b> 次：</div>' +
+                    '<table style="width:100%; border-collapse:collapse;">' +
+                        '<thead><tr style="background:#f3f4f6;"><th>日期</th><th>當日名次</th><th>抵達時間</th><th>當日圈數</th></tr></thead>' +
+                        '<tbody>' +
+                            logItems.map(function(item) {
+                                return '<tr>' +
+                                    '<td><b>' + item.date + '</b></td>' +
+                                    '<td style="color:#d97706; font-weight:bold;">第 ' + item.rank + ' 名</td>' +
+                                    '<td style="color:#6b7280; font-size:11px;">' + item.time + '</td>' +
+                                    '<td>' + item.laps + ' 圈</td>' +
+                                '</tr>';
+                            }).join('') +
+                        '</tbody>' +
+                    '</table>';
             }
 
             document.getElementById('detailModal').style.display = 'flex';
         }
 
         function showLapsDetail(studentId) {
-            const student = initialStudents.find(s => s.id === studentId);
+            const student = initialStudents.find(function(s) { return s.id === studentId; });
             if (!student) return;
 
             let logItems = [];
             const dates = Object.keys(historyLogs).sort();
 
-            dates.forEach(date => {
+            dates.forEach(function(date) {
                 const dayData = historyLogs[date] || [];
-                const record = dayData.find(s => s.id === studentId);
+                const record = dayData.find(function(s) { return s.id === studentId; });
                 if (record && (record.todayLaps || 0) > 0) {
                     const valid = Math.max(0, (record.todayLaps || 0) - (record.todayLateLaps || 0));
                     logItems.push({
@@ -1012,27 +1006,25 @@
                 }
             });
 
-            document.getElementById('modalTitle').innerText = `🏃‍♂️ ${student.id}號 ${student.name} - 跑步歷史明細`;
+            document.getElementById('modalTitle').innerText = "🏃‍♂️ " + student.id + "號 " + student.name + " - 跑步歷史明細";
             const modalBody = document.getElementById('modalBody');
 
             if (logItems.length === 0) {
                 modalBody.innerHTML = '<div style="color:#9ca3af; text-align:center; padding:15px;">尚無跑步歷史紀錄</div>';
             } else {
-                modalBody.innerHTML = `
-                    <table style="width:100%; border-collapse:collapse;">
-                        <thead><tr style="background:#f3f4f6;"><th>日期</th><th>限時圈數</th><th>超時圈</th><th>當日總圈</th></tr></thead>
-                        <tbody>
-                            ${logItems.map(item => `
-                                <tr>
-                                    <td><b>${item.date}</b></td>
-                                    <td style="color:#059669; font-weight:bold;">${item.validToday} 圈</td>
-                                    <td style="color:#dc2626;">${item.lateToday} 圈</td>
-                                    <td>${item.totalToday} 圈</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                `;
+                modalBody.innerHTML = '<table style="width:100%; border-collapse:collapse;">' +
+                        '<thead><tr style="background:#f3f4f6;"><th>日期</th><th>限時圈數</th><th>超時圈</th><th>當日總圈</th></tr></thead>' +
+                        '<tbody>' +
+                            logItems.map(function(item) {
+                                return '<tr>' +
+                                    '<td><b>' + item.date + '</b></td>' +
+                                    '<td style="color:#059669; font-weight:bold;">' + item.validToday + ' 圈</td>' +
+                                    '<td style="color:#dc2626;">' + item.lateToday + ' 圈</td>' +
+                                    '<td>' + item.totalToday + ' 圈</td>' +
+                                '</tr>';
+                            }).join('') +
+                        '</tbody>' +
+                    '</table>';
             }
 
             document.getElementById('detailModal').style.display = 'flex';
@@ -1051,18 +1043,18 @@
             let sortedData = [...targetData];
 
             if (sortVal === 'seat') {
-                sortedData.sort((a,b) => a.id - b.id);
+                sortedData.sort(function(a,b) { return a.id - b.id; });
             } else if (sortVal === 'top5') {
-                sortedData.sort((a,b) => {
+                sortedData.sort(function(a,b) {
                     const cA = top5Counts[a.id] || 0;
                     const cB = top5Counts[b.id] || 0;
                     if (cB !== cA) return cB - cA;
                     return a.id - b.id;
                 });
             } else if (sortVal === 'validTotal') {
-                sortedData.sort((a,b) => {
-                    const studentRefA = students.find(st => st.id === a.id) || a;
-                    const studentRefB = students.find(st => st.id === b.id) || b;
+                sortedData.sort(function(a,b) {
+                    const studentRefA = students.find(function(st) { return st.id === a.id; }) || a;
+                    const studentRefB = students.find(function(st) { return st.id === b.id; }) || b;
                     const vA = Math.max(0, (studentRefA.totalLaps || 0) - (studentRefA.totalLateLaps || 0));
                     const vB = Math.max(0, (studentRefB.totalLaps || 0) - (studentRefB.totalLateLaps || 0));
                     if (vB !== vA) return vB - vA;
@@ -1071,20 +1063,20 @@
             }
 
             let csvContent = "\uFEFF序號,座號,姓名,性別,當日總圈數,當日限時圈,超時圈數,累計Top5次數,累計限時圈,今日狀態\n";
-            sortedData.forEach((s, idx) => {
+            sortedData.forEach(function(s, idx) {
                 const validTodayLaps = Math.max(0, (s.todayLaps || 0) - (s.todayLateLaps || 0));
-                const studentRef = students.find(st => st.id === s.id) || s;
+                const studentRef = students.find(function(st) { return st.id === s.id; }) || s;
                 const validTotalLaps = Math.max(0, (studentRef.totalLaps || 0) - (studentRef.totalLateLaps || 0));
                 const topCount = top5Counts[s.id] || 0;
                 const status = s.isLeave ? '請假' : (s.todayLaps > 0 ? '已完成' : '未跑');
 
-                csvContent += `${idx+1},${s.id},${s.name},${s.gender},${s.todayLaps||0},${validTodayLaps},${s.todayLateLaps||0},${topCount},${validTotalLaps},${status}\n`;
+                csvContent += (idx+1) + "," + s.id + "," + s.name + "," + s.gender + "," + (s.todayLaps||0) + "," + validTodayLaps + "," + (s.todayLateLaps||0) + "," + topCount + "," + validTotalLaps + "," + status + "\n";
             });
 
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = `健促跑步紀錄_${dateVal}.csv`;
+            link.download = "健促跑步紀錄_" + dateVal + ".csv";
             link.click();
         }
 
