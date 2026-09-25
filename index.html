@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>健促跑步追蹤器 (雲端同步版)</title>
+    <title>班級健促跑步追蹤器 (雲端同步版)</title>
+    
     <!-- 1. 網頁分頁標籤上的小圖示 (Favicon) -->
     <link rel="icon" href="icon.png">
 
     <!-- 2. 給 Google Classroom、LINE 看的連結預覽設定 (OG 標籤) -->
-    <meta property="og:title" content="🏃‍♂️ 健促跑步追蹤器">
-    <meta property="og:description" content="全班一起累積跑步圈數，即時查看今日 Top 5 英雄榜！">
-    <meta property="og:image" content="icon.png">
-    
-    
+    <meta property="og:title" content="🏃‍♂️ 班級健促跑步追蹤器">
+    <meta property="og:description" content="全班一起累積跑步圈數，即時查看今日與累計 Top 5 英雄榜！">
+    <meta property="og:image" content="https://你的圖片網址.png">
+
     <!-- 引入 Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -122,7 +122,7 @@
 <body>
 
     <div class="header-bar">
-        <h1>🏃‍♂️ 健促追蹤器</h1>
+        <h1>🏃‍♂️ 班級健促追蹤器</h1>
         <div class="header-btns">
             <button class="settings-toggle" id="settingsToggleBtn" onclick="toggleSettings()">⚙️ 設定</button>
             <button class="auth-btn" id="authBtn" onclick="handleAuthClick()">🔒 教師登入</button>
@@ -136,7 +136,7 @@
     <div class="sync-status" id="syncStatus">☁️ 雲端同步中...</div>
     <div id="statusBanner" class="status-banner view-only">👀 載入中...</div>
 
-    <!-- 自訂參數面板 (僅管理員可見) -->
+    <!-- 自訂參數面板 -->
     <div class="settings-card" id="settingsCard">
         <div class="settings-group">
             <div style="font-weight:bold; color:#1a56db; margin-bottom:4px;">⚙️ 自訂參數設定 (設定會永久保留)</div>
@@ -186,7 +186,7 @@
     <!-- 分頁選單 -->
     <div class="tabs">
         <button class="tab-btn" id="inputTabBtn" onclick="switchTab('input-page')" style="display:none;">⚡ 快速記圈</button>
-        <button class="tab-btn active" id="rankTabBtn" onclick="switchTab('rank-page')">🏆 今日 Top 5</button>
+        <button class="tab-btn active" id="rankTabBtn" onclick="switchTab('rank-page')">🏆 今日/累計 Top 5</button>
         <button class="tab-btn" id="backendTabBtn" onclick="switchTab('backend-page')">📊 後端數據</button>
     </div>
 
@@ -206,21 +206,44 @@
         <div class="student-grid" id="studentGrid"></div>
     </div>
 
-    <!-- 頁面 2：今日男女 Top 5 -->
+    <!-- 頁面 2：今日與累計男女 Top 5 -->
     <div id="rank-page" class="page active">
+        <!-- ⚡ 當日 / 最近一次跑步英雄榜 -->
+        <div style="font-weight:bold; color:#1e3a8a; margin-bottom:8px; font-size:14px; display:flex; align-items:center; gap:4px;">
+            <span>⚡ 當日 / 最近一次跑步英雄榜</span>
+        </div>
         <div class="rank-card">
             <div class="rank-title" style="color: #2563eb;">
-                <span>👦 男生今日 Top 5</span>
+                <span>👦 男生跑步 Top 5</span>
                 <span id="maleRankDate" style="font-size:12px; color:#6b7280; font-weight:normal;"></span>
             </div>
             <div id="maleRankList"></div>
         </div>
         <div class="rank-card">
             <div class="rank-title" style="color: #db2777;">
-                <span>👧 女生今日 Top 5</span>
+                <span>👧 女生跑步 Top 5</span>
                 <span id="femaleRankDate" style="font-size:12px; color:#6b7280; font-weight:normal;"></span>
             </div>
             <div id="femaleRankList"></div>
+        </div>
+
+        <hr style="border:0; border-top:1px dashed #cbd5e1; margin:16px 0 12px 0;">
+
+        <!-- 🏆 全學期累計英雄榜 -->
+        <div style="font-weight:bold; color:#1e3a8a; margin-bottom:8px; font-size:14px;">
+            <span>🏆 全學期累計有效圈數 Top 5</span>
+        </div>
+        <div class="rank-card">
+            <div class="rank-title" style="color: #2563eb;">
+                <span>👦 男生累計總排名 Top 5</span>
+            </div>
+            <div id="maleCumRankList"></div>
+        </div>
+        <div class="rank-card">
+            <div class="rank-title" style="color: #db2777;">
+                <span>👧 女生累計總排名 Top 5</span>
+            </div>
+            <div id="femaleCumRankList"></div>
         </div>
     </div>
 
@@ -285,24 +308,20 @@
     <div id="toast" class="toast">已成功！</div>
 
     <script>
-        // ==========================================
-        // 🔒 系統管理密碼設定 (可在此修改)
-        // ==========================================
-        const ADMIN_PASSWORD = "8888";
+        const ADMIN_PASSWORD = "1234";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAbQ1UxwWWOYP64pMGAcQJlikdadOFJmj0",
-            authDomain: "running-app-ce6e2.firebaseapp.com",
-            projectId: "running-app-ce6e2",
-            storageBucket: "running-app-ce6e2.firebasestorage.app",
-            messagingSenderId: "492999401691",
-            appId: "1:492999401691:web:319ad5d1761a02f27cecfe"
-        };
+      const firebaseConfig = {
+  apiKey: "AIzaSyAbQ1UxwWWOYP64pMGAcQJlikdadOFJmj0",
+  authDomain: "running-app-ce6e2.firebaseapp.com",
+  projectId: "running-app-ce6e2",
+  storageBucket: "running-app-ce6e2.firebasestorage.app",
+  messagingSenderId: "492999401691",
+  appId: "1:492999401691:web:319ad5d1761a02f27cecfe"
+};
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // 💡 登入權限狀態檢查
         let isAdmin = localStorage.getItem('running_admin_logged_in') === 'true';
 
         const initialStudents = [
@@ -351,7 +370,6 @@
         let historyLogs = {};
         let students = JSON.parse(JSON.stringify(initialStudents));
 
-        // 💡 權限 UI 切換邏輯
         function updateAuthUI() {
             const authBtn = document.getElementById('authBtn');
             const inputTabBtn = document.getElementById('inputTabBtn');
@@ -376,32 +394,29 @@
                 statusBanner.innerText = "👀 目前為「唯讀觀看模式」（僅供瀏覽排名與數據）";
                 statusBanner.className = "status-banner view-only";
 
-                // 若在觀看模式卻停留在記圈頁，強制切換至排名
                 if (document.getElementById('input-page').classList.contains('active')) {
                     switchTab('rank-page');
                 }
             }
-            renderGrid(); // 重新渲染卡片綁定點擊事件
+            renderGrid();
         }
 
         function handleAuthClick() {
             if (isAdmin) {
-                // 執行登出
                 localStorage.removeItem('running_admin_logged_in');
                 isAdmin = false;
                 updateAuthUI();
                 showToast("🔓 已安全登出！返回觀看模式。");
             } else {
-                // 執行登入
                 const pwd = prompt("請輸入教師管理密碼：");
-                if (pwd === null) return; // 按下取消
+                if (pwd === null) return;
                 
                 if (pwd === ADMIN_PASSWORD) {
                     localStorage.setItem('running_admin_logged_in', 'true');
                     isAdmin = true;
                     updateAuthUI();
                     showToast("✅ 登入成功！已解鎖管理權限。");
-                    switchTab('input-page'); // 登入成功直接跳到記圈頁
+                    switchTab('input-page');
                 } else {
                     alert("❌ 密碼錯誤！無法解鎖。");
                 }
@@ -575,7 +590,6 @@
         }
 
         function switchTab(pageId) {
-            // 如果是非管理員，且想切到 input-page，則強制阻擋
             if (!isAdmin && pageId === 'input-page') return;
 
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -624,7 +638,7 @@
                     ${btnControls}
                     <div class="seat-num">${s.id}號</div>
                     <div class="seat-name">${s.name}</div>
-                    <div class="today-laps">${isLeave ? '【當日請假】' : `當日 ${s.todayLaps || 0} 圈 ${lateText}`}</div>
+                    <div class="today-laps">${isLeave ? '【當日請假】' : `當日 ${s.todayLaps \vert{}\vert{} 0} 圈 ${lateText}`}</div>
                     <div class="total-laps">累計 ${s.totalLaps || 0} 圈</div>
                 `;
                 grid.appendChild(card);
@@ -737,29 +751,94 @@
             setTimeout(() => { toast.style.display = 'none'; }, 1200);
         }
 
+        /* 💡 渲染「當日/最近 Top 5」與「全學期累計 Top 5」 */
         function renderRankings() {
-            document.getElementById('maleRankDate').innerText = `(${currentWorkingDate})`;
-            document.getElementById('femaleRankDate').innerText = `(${currentWorkingDate})`;
+            // --- 1. 當日 / 最近一次 Top 5 邏輯 ---
+            let displayDate = currentWorkingDate;
+            let activeStudents = students;
 
-            const maleList = students.filter(s => s.gender === '男' && (s.todayLaps || 0) > 0)
+            const hasRunToday = students.some(s => (s.todayLaps || 0) > 0);
+
+            // 若當天完全無紀錄，搜尋歷史中最接近且有紀錄的那一天
+            if (!hasRunToday) {
+                const sortedDates = Object.keys(historyLogs).filter(d => {
+                    const logs = historyLogs[d] || [];
+                    return logs.some(s => (s.todayLaps || 0) > 0);
+                }).sort().reverse();
+
+                if (sortedDates.length > 0) {
+                    displayDate = sortedDates[0];
+                    activeStudents = historyLogs[displayDate] || [];
+                }
+            }
+
+            const dateTagText = (displayDate === currentWorkingDate && hasRunToday) 
+                ? `(${displayDate} 今日)` 
+                : `(${displayDate} 最近紀錄)`;
+
+            document.getElementById('maleRankDate').innerText = dateTagText;
+            document.getElementById('femaleRankDate').innerText = dateTagText;
+
+            const maleList = activeStudents.filter(s => s.gender === '男' && (s.todayLaps || 0) > 0)
                                      .sort((a,b) => (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity))
                                      .slice(0, 5);
 
-            const femaleList = students.filter(s => s.gender === '女' && (s.todayLaps || 0) > 0)
+            const femaleList = activeStudents.filter(s => s.gender === '女' && (s.todayLaps || 0) > 0)
                                        .sort((a,b) => (a.todayFirstLapTime || Infinity) - (b.todayFirstLapTime || Infinity))
                                        .slice(0, 5);
 
-            document.getElementById('maleRankList').innerHTML = maleList.length === 0 ? '<div style="color:#9ca3af; font-size:13px; text-align:center;">當日尚無紀錄</div>' : maleList.map((s, index) => `
+            document.getElementById('maleRankList').innerHTML = maleList.length === 0 ? '<div style="color:#9ca3af; font-size:13px; text-align:center;">尚無紀錄</div>' : maleList.map((s, index) => `
                 <div class="rank-item">
                     <span><span class="rank-badge top-${index+1}">${index+1}</span> ${s.id}號 ${s.name} <span style="font-size:11px; color:#6b7280;">(${formatTime(s.todayFirstLapTime)} 抵達)</span></span>
-                    <span style="font-weight:bold; color:#2563eb;">當日 ${s.todayLaps||0} 圈</span>
+                    <span style="font-weight:bold; color:#2563eb;">${s.todayLaps||0} 圈</span>
                 </div>
             `).join('');
 
-            document.getElementById('femaleRankList').innerHTML = femaleList.length === 0 ? '<div style="color:#9ca3af; font-size:13px; text-align:center;">當日尚無紀錄</div>' : femaleList.map((s, index) => `
+            document.getElementById('femaleRankList').innerHTML = femaleList.length === 0 ? '<div style="color:#9ca3af; font-size:13px; text-align:center;">尚無紀錄</div>' : femaleList.map((s, index) => `
                 <div class="rank-item">
                     <span><span class="rank-badge top-${index+1}">${index+1}</span> ${s.id}號 ${s.name} <span style="font-size:11px; color:#6b7280;">(${formatTime(s.todayFirstLapTime)} 抵達)</span></span>
-                    <span style="font-weight:bold; color:#db2777;">當日 ${s.todayLaps||0} 圈</span>
+                    <span style="font-weight:bold; color:#db2777;">${s.todayLaps||0} 圈</span>
+                </div>
+            `).join('');
+
+            // --- 2. 全學期累計 Top 5 (男女分開) 邏輯 ---
+            const top5Counts = calculateTop5Counts();
+
+            const cumulativeData = initialStudents.map(initS => {
+                let validTotal = 0;
+                Object.keys(historyLogs).forEach(d => {
+                    const rec = (historyLogs[d] || []).find(s => s.id === initS.id);
+                    if (rec) {
+                        const valid = (rec.todayLaps || 0) - (rec.todayLateLaps || 0);
+                        validTotal += Math.max(0, valid);
+                    }
+                });
+                return {
+                    ...initS,
+                    validTotalLaps: validTotal,
+                    top5Count: top5Counts[initS.id] || 0
+                };
+            });
+
+            const maleCumList = cumulativeData.filter(s => s.gender === '男' && s.validTotalLaps > 0)
+                                              .sort((a,b) => b.validTotalLaps - a.validTotalLaps || a.id - b.id)
+                                              .slice(0, 5);
+
+            const femaleCumList = cumulativeData.filter(s => s.gender === '女' && s.validTotalLaps > 0)
+                                                .sort((a,b) => b.validTotalLaps - a.validTotalLaps || a.id - b.id)
+                                                .slice(0, 5);
+
+            document.getElementById('maleCumRankList').innerHTML = maleCumList.length === 0 ? '<div style="color:#9ca3af; font-size:13px; text-align:center;">尚無累計紀錄</div>' : maleCumList.map((s, index) => `
+                <div class="rank-item">
+                    <span><span class="rank-badge top-${index+1}">${index+1}</span> ${s.id}號 ${s.name} <span style="font-size:11px; color:#d97706;">(登榜 ${s.top5Count} 次)</span></span>
+                    <span style="font-weight:bold; color:#2563eb;">累計 ${s.validTotalLaps} 圈</span>
+                </div>
+            `).join('');
+
+            document.getElementById('femaleCumRankList').innerHTML = femaleCumList.length === 0 ? '<div style="color:#9ca3af; font-size:13px; text-align:center;">尚無累計紀錄</div>' : femaleCumList.map((s, index) => `
+                <div class="rank-item">
+                    <span><span class="rank-badge top-${index+1}">${index+1}</span> ${s.id}號 ${s.name} <span style="font-size:11px; color:#d97706;">(登榜 ${s.top5Count} 次)</span></span>
+                    <span style="font-weight:bold; color:#db2777;">累計 ${s.validTotalLaps} 圈</span>
                 </div>
             `).join('');
         }
@@ -1009,7 +1088,6 @@
             link.click();
         }
 
-        // 初始化載入 UI
         updateAuthUI();
         updateDateUI();
         updateTimerDisplay();
